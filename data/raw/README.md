@@ -7,7 +7,7 @@ Taken from Kaggle -> [click here for source](https://www.kaggle.com/datasets/kus
 Labels:
 * joy, sadness, anger, fear, surprise, love
 
-**NOTE**: I split the dataset into 3 parts so I could upload it here and work with it. Just run the `join_data.py` script in *scripts* folder before running `main.py` or anything else in this repository
+**NOTE**: Download the dataset, name the file `dataset_6labels.csv` and put it here in *data/raw*. Then you're set (to work with this dataset).
 
 
 ## 2. GoEmotions dataset (27 emotions + neutral)
