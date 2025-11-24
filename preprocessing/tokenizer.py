@@ -1,5 +1,7 @@
 import re
 import joblib
+import math
+import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 
@@ -33,37 +35,65 @@ def custom_tokenizer(text, mode="ml", use_ner_tags=False):
 
 
 # -----------------------------------------------------------
-# 2. Extract all NOT_ and NER tokens → force-keep in vocabulary
+# 2. Create a pickle-able tokenizer class
+# -----------------------------------------------------------
+class CustomTokenizer:
+    def __init__(self, use_ner_tags=False):
+        self.use_ner_tags = use_ner_tags
+    
+    def __call__(self, text):
+        return custom_tokenizer(text, mode="ml", use_ner_tags=self.use_ner_tags)
+
+
+# -----------------------------------------------------------
+# 3. Extract all NOT_ and NER tokens → force-keep in vocabulary
 # -----------------------------------------------------------
 def extract_special_tokens(texts, use_ner_tags=False):
     specials = set()
 
     for t in texts:
-        specials.update(re.findall(r"NOT_\w+", t))
+        # Skip None and NaN values
+        if t is None or (isinstance(t, float) and np.isnan(t)):
+            continue
+            
+        # Convert to string if not already
+        text_str = str(t)
+        
+        specials.update(re.findall(r"NOT_\w+", text_str))
         if use_ner_tags:
-            specials.update(re.findall(r"\[[A-Z_]+\]", t))
+            specials.update(re.findall(r"\[[A-Z_]+\]", text_str))
 
     return list(specials)
 
 
 # -----------------------------------------------------------
-# 3. Prepare augmented texts
+# 4. Prepare augmented texts
 # -----------------------------------------------------------
 def prepare_texts_with_special_tokens(texts, use_ner_tags=False):
+    # Clean the texts first - remove NaN/None values and convert to strings
+    cleaned_texts = []
+    for t in texts:
+        if t is None or (isinstance(t, float) and np.isnan(t)):
+            cleaned_texts.append("")  # Replace with empty string
+        else:
+            cleaned_texts.append(str(t))
+    
+    texts = cleaned_texts
+    
     specials = extract_special_tokens(texts, use_ner_tags)
     augmented = texts + [" ".join(specials)]  # Append special tokens so TF-IDF learns them
     return augmented, specials
 
 
 # -----------------------------------------------------------
-# 4. Fit a TF-IDF vectorizer
+# 5. Fit a TF-IDF vectorizer
 # -----------------------------------------------------------
 def fit_tfidf_vectorizer(
     texts,
     mode="ml",
     use_ner_tags=False,
     max_features=50000,
-    min_df=3,
+    min_df=2,
     max_df=0.9,
     save_path=None
 ):
@@ -71,13 +101,11 @@ def fit_tfidf_vectorizer(
         raise ValueError("TF-IDF should NOT be used in transformer mode.")
 
     # A — augment data so NOT_ tokens remain
-    augmented_texts, specials = prepare_texts_with_special_tokens(
-        texts, use_ner_tags
-    )
+    augmented_texts, specials = prepare_texts_with_special_tokens(texts, use_ner_tags)
 
-    # B — build vectorizer
+    # B — build vectorizer with pickle-able tokenizer
     vectorizer = TfidfVectorizer(
-        tokenizer=lambda t: custom_tokenizer(t, mode="ml", use_ner_tags=use_ner_tags),
+        tokenizer=CustomTokenizer(use_ner_tags=use_ner_tags),  # Use class instead of function
         lowercase=False,
         max_features=max_features,
         min_df=min_df,
@@ -93,18 +121,19 @@ def fit_tfidf_vectorizer(
         joblib.dump(vectorizer, save_path)
 
     print(f"[OK] TF-IDF fitted. Vocabulary size = {len(vectorizer.vocabulary_)}")
+    print("If there's a warning about token_pattern it means custom tokenizer is working! All good!")
     return vectorizer, X
 
 
 # -----------------------------------------------------------
-# 5. Load vectorizer
+# 6. Load vectorizer
 # -----------------------------------------------------------
 def load_vectorizer(path):
     return joblib.load(path)
 
 
 # -----------------------------------------------------------
-# 6. Vectorize new text
+# 7. Vectorize new text
 # -----------------------------------------------------------
 def vectorize_new_text(vectorizer, texts, mode="ml", use_ner_tags=False):
     if mode == "transformer":
