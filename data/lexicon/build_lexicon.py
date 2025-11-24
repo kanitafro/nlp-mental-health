@@ -47,7 +47,7 @@ def build_and_save_lexicon(output_dir="data/lexicon"):
     save_dict_as_json(lex_clean, output_dir, filename="lexicon_clean.json")
 
     print(f"💾 Saving cleaned CSV → {clean_csv_path}")
-    save_dict_as_csv(df_clean, output_dir, filename="lexicon_clean.csv")
+    save_dict_as_csv(lex_clean, output_dir, filename="lexicon_clean.csv")
 
     print("✅ Lexicon build complete!")
     return lex_clean, df_clean
