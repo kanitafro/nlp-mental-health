@@ -1,6 +1,6 @@
 from IPython.utils.text import string
-from text_utils import fix_missing_apostrophes, expand_contractions_and_slang, replace_emojis_and_emoticons, handle_negations
-from text_utils import STOPWORDS, KEEP_WORDS
+from preprocessing.text_utils import fix_missing_apostrophes, expand_contractions_and_slang, replace_emojis_and_emoticons, handle_negations
+from preprocessing.text_utils import STOPWORDS, KEEP_WORDS
 import re
 import nltk
 import string
