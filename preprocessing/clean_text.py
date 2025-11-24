@@ -49,7 +49,8 @@ def clean_text(text: str, mode="ml", use_ner_tags=False):
     # Negation handling
     tokens = handle_negations(tokens)
 
-    KEEP_WORDS = KEEP_WORDS - "not" - "no"
+    # KEEP_WORDS = KEEP_WORDS - "not" - "no" # -> GO BACK TO THIS
+    
     # Remove stopwords for ML only
     if mode == "ml":
         tokens = [t for t in tokens if t not in STOPWORDS or t in KEEP_WORDS]
@@ -59,3 +60,4 @@ def clean_text(text: str, mode="ml", use_ner_tags=False):
         tokens = [t.replace("NOT_", "") for t in tokens]
 
     return " ".join(tokens)
+
