@@ -22,7 +22,6 @@ def run_cleaning_pipeline():
     print("Labels: ", df['label'].unique())
 
     print("=== Clean 6 labels dataset ===")
-    run_cleaning_pipeline()
     # Apply all cleaning versions
     print("Cleaning text for ML mode without NER tags:")
     df["clean_text_ml"] = df["text"].progress_apply(
@@ -58,3 +57,6 @@ def run_cleaning_pipeline():
 
     df.to_csv("data/processed/goemotions_6.csv", index=False)
     """
+
+if __name__=="__main__":
+    run_cleaning_pipeline()
