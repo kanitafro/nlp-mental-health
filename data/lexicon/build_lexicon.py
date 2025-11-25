@@ -29,10 +29,7 @@ def build_and_save_lexicon(output_dir="data/lexicon"):
     """
     print("📥 Loading raw lexicon...")
     lexicon = get_lexicon()  # dictionary
-    
-    # --------------------------------
-    # Save raw lexicon as json and csv
-    # --------------------------------
+
     print("Getting raw lexicon:")
     json_path = os.path.join(output_dir, "lexicon.json")
     csv_path = os.path.join(output_dir, "lexicon.csv")
