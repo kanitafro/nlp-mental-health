@@ -22,7 +22,7 @@ def run_cleaning_pipeline():
             print(col)
     # rename label 'sad' to 'sadness'
     df['label'] = df['label'].replace('sad', 'sadness')
-    print("\nLabels: ", df['label'].unique())
+    print("Labels: ", df['label'].unique())
 
     print("=== Clean 6 labels dataset ===")
     # Apply all cleaning versions
