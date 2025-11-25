@@ -1,13 +1,9 @@
 import pandas as pd
 import numpy as np
 
-from data.lexicon.build_lexicon import build_and_save_lexicon
 from preprocessing.tokenizer import fit_tfidf_vectorizer
 
-
 def main():
-    build_and_save_lexicon()
-
     df = pd.read_csv("data/processed/dataset_6labels_clean.csv")
     texts = df["clean_text_ml"].tolist()
 
