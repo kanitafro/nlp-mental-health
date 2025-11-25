@@ -15,7 +15,7 @@ def main():
     vectorizer, X = fit_tfidf_vectorizer(
         texts,
         mode="ml",
-        use_ner_tags=True,
+        use_ner_tags=False,
         max_features=50000,
         min_df=2,
         max_df=0.9,
