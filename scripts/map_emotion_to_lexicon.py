@@ -1,5 +1,4 @@
-# run 'python scripts/map_emotions_to_lexicon.py' on terminal ONCE
-
+# run 'python -m scripts.map_emotion_to_lexicon' on terminal ONCE
 
 """
 This script:
@@ -18,6 +17,7 @@ import pandas as pd
 from data.lexicon.lexicon_raw import get_lexicon
 from preprocessing.clean_lexicon import clean_lexicon
 from preprocessing.map_emotions import REVERSE_MAP
+from data.lexicon.build_lexicon import build_and_save_lexicon
 
 # ------------------------------------------------------------------
 # Convert a list of 27 emotions to 6-family emotions
@@ -113,4 +113,5 @@ def run_lexicon_emotion_mapping():
     print("   - lexicon_clean_6.csv")
 
 if __name__ == "__main__":
+    build_and_save_lexicon()
     run_lexicon_emotion_mapping()
