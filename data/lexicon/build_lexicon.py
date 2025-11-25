@@ -27,11 +27,23 @@ def build_and_save_lexicon(output_dir="data/lexicon"):
     3. Convert to DataFrame
     4. Save JSON & CSV
     """
-
     print("📥 Loading raw lexicon...")
     lexicon = get_lexicon()  # dictionary
+    
+    # --------------------------------
+    # Save raw lexicon as json and csv
+    # --------------------------------
+    print("Getting raw lexicon:")
+    json_path = os.path.join(output_dir, "lexicon.json")
+    csv_path = os.path.join(output_dir, "lexicon.csv")
 
-    print("🧹 Cleaning lexicon...")
+    print(f"💾 Saving raw JSON → {json_path}")
+    save_dict_as_json(lexicon, output_dir, filename="lexicon.json")
+
+    print(f"💾 Saving raw CSV → {csv_path}")
+    save_dict_as_csv(lexicon, output_dir, filename="lexicon.csv")
+
+    print("\n🧹 Cleaning lexicon...")
     lex_clean, df_clean = clean_lexicon(lexicon)
 
     # Ensure output folder exists
@@ -49,6 +61,6 @@ def build_and_save_lexicon(output_dir="data/lexicon"):
     print(f"💾 Saving cleaned CSV → {clean_csv_path}")
     save_dict_as_csv(lex_clean, output_dir, filename="lexicon_clean.csv")
 
-    print("✅ Lexicon build complete!")
+    print("✅ Lexicon build complete!\n")
     return lex_clean, df_clean
 
