@@ -15,11 +15,14 @@ def run_cleaning_pipeline():
     # rename columns to be 'text' and 'label'
     df = df.rename(columns={'sentence': 'text', 'emotion': 'label'})
     print("Column names after renaming:", end=" ")
-    for col in df.columns:
-        print(col, end=", ")
+    for i, col in enumerate(df.columns):
+        if i < len(df.columns)-1:
+            print(col, end=", ")
+        else:
+            print(col)
     # rename label 'sad' to 'sadness'
     df['label'] = df['label'].replace('sad', 'sadness')
-    print("Labels: ", df['label'].unique())
+    print("\nLabels: ", df['label'].unique())
 
     print("=== Clean 6 labels dataset ===")
     # Apply all cleaning versions
