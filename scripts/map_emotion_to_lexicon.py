@@ -1,4 +1,5 @@
-# run 'python -m scripts.map_emotion_to_lexicon' on terminal ONCE
+# run 'python scripts/map_emotions_to_lexicon.py' on terminal ONCE
+
 
 """
 This script:
