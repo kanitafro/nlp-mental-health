@@ -6,3 +6,4 @@ Ipython
 nltk
 tqdm
 joblib
+imbalanced-learn
