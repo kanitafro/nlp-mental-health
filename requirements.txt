@@ -7,3 +7,5 @@ nltk
 tqdm
 joblib
 imbalanced-learn
+seaborn
+matplotlib
