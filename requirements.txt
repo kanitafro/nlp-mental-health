@@ -9,3 +9,6 @@ joblib
 imbalanced-learn
 seaborn
 matplotlib
+torch
+hf_xet
+transformers
