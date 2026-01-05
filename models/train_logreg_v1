@@ -1,0 +1,182 @@
+# Uploaded only v1.3 which is the best one
+
+import re
+import joblib
+import math
+import numpy as np
+import pandas as pd
+from collections import Counter
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from imblearn.pipeline import Pipeline as ImbPipeline
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+
+# Import your custom vectorizer components
+from preprocessing.tokenizer import CustomTokenizer, fit_tfidf_vectorizer
+
+# Import SMOTE functions
+from utils.smote_oversampling import create_smote_strategy, apply_smote_oversampling, analyze_smote_memory_efficient, visualize_smote_efficient
+
+def prepare_data(df):
+    """
+    Prepare and split data for training
+    """
+    print("📊 Preparing data...")
+    df = df.dropna(subset=["clean_text_ml", "label"])
+    texts = df["clean_text_ml"].astype(str).tolist()
+    labels = df["label"].astype(str).tolist()
+
+    # Check current class distribution
+    class_distribution = Counter(labels)
+    print("📈 Original class distribution:")
+    for emotion, count in class_distribution.items():
+        print(f"   {emotion}: {count} samples")
+
+    # Split data
+    print("\n🎯 Splitting data into train/test...")
+    X_train, X_test, y_train, y_test = train_test_split(
+        texts, labels,
+        test_size=0.2,
+        random_state=42,
+        stratify=labels
+    )
+    
+    return X_train, X_test, y_train, y_test
+
+def create_vectorizer(use_ner_tags=False, max_features=50000, min_df=2, max_df=0.9):
+    """
+    Create TF-IDF vectorizer with custom tokenizer
+    """
+    vectorizer = TfidfVectorizer(
+        tokenizer=CustomTokenizer(use_ner_tags=use_ner_tags),
+        lowercase=False,
+        max_features=max_features,
+        min_df=min_df,
+        max_df=max_df,
+        analyzer="word"
+    )
+    return vectorizer
+
+def create_classifier():
+    """
+    Create logistic regression classifier
+    """
+    classifier = LogisticRegression(
+        C=0.5,
+        solver='lbfgs',
+        penalty='l2',
+        random_state=42,
+        max_iter=1000,
+        class_weight=None,
+        n_jobs=-1
+    )
+    return classifier
+
+def train_logistic_regression_with_smote(
+    df,
+    use_ner_tags=False,
+    max_features=50000,
+    min_df=2,
+    max_df=0.9,
+    analyze_synthetic=True,
+    n_analyze_samples=50
+):
+    """
+    Main training function for logistic regression with SMOTE
+    """
+    # 1. Prepare data
+    X_train, X_test, y_train, y_test = prepare_data(df)
+    
+    # 2. Create SMOTE strategy
+    smote_sampling_strategy = create_smote_strategy(y_train)
+    
+    # 3. Create vectorizer and transform data
+    print("\n🔧 Creating vectorizer...")
+    vectorizer = create_vectorizer(use_ner_tags, max_features, min_df, max_df)
+    
+    print("🚀 Applying TF-IDF transformation...")
+    X_train_tfidf = vectorizer.fit_transform(X_train)
+    X_test_tfidf = vectorizer.transform(X_test)
+    
+    # 4. Apply SMOTE oversampling
+    X_resampled, y_resampled, smote = apply_smote_oversampling(
+        X_train_tfidf, y_train, smote_sampling_strategy
+    )
+    
+    # 5. Analyze SMOTE results (optional)
+    smote_results = None
+    if analyze_synthetic:
+        print("🔍 Analyzing SMOTE-generated data...")
+        target_classes = list(smote_sampling_strategy.keys())
+        smote_results = analyze_smote_memory_efficient(
+            X_train_tfidf, y_train, X_resampled, y_resampled, 
+            vectorizer, target_classes, n_samples=n_analyze_samples
+        )
+        visualize_smote_efficient(smote_results)
+    
+    # 6. Train classifier
+    print("🤖 Training classifier...")
+    classifier = create_classifier()
+    classifier.fit(X_resampled, y_resampled)
+    
+    # 7. Create pipeline for consistency
+    pipeline = ImbPipeline([
+        ('tfidf', vectorizer),
+        ('smote', smote),
+        ('classifier', classifier)
+    ])
+    
+    # 8. Evaluate model
+    print("\n📈 Evaluating model...")
+    y_test_pred = pipeline.predict(X_test)
+    test_accuracy = accuracy_score(y_test, y_test_pred)
+
+    print(f"\n✅ Test Accuracy: {test_accuracy:.4f}")
+    
+    # Detailed classification report
+    print("\n📋 Classification Report (Test Set):")
+    print(classification_report(y_test, y_test_pred, digits=4))
+
+    # Confusion matrix
+    print("🎯 Confusion Matrix (Test Set):")
+    cm = confusion_matrix(y_test, y_test_pred, labels=pipeline.classes_)
+    print(cm)
+    
+    # Focus on target classes
+    report_dict = classification_report(y_test, y_test_pred, output_dict=True)
+    print("\n🔍 Target classes performance:")
+    target_classes = ['love', 'suprise']
+    for cls in target_classes:
+        if cls in report_dict:
+            precision = report_dict[cls]['precision']
+            recall = report_dict[cls]['recall']
+            f1 = report_dict[cls]['f1-score']
+            print(f"   {cls}: Precision={precision:.4f}, Recall={recall:.4f}, F1={f1:.4f}")
+
+    return pipeline, X_test, y_test, smote_results
+
+def main():
+    df = pd.read_csv("data/processed/dataset_6labels_clean.csv")
+    
+    # Train model with SMOTE
+    smote_pipeline, X_test, y_test, smote_results = train_logistic_regression_with_smote(
+        df=df,
+        use_ner_tags=False,
+        max_features=50000,
+        min_df=2,
+        max_df=0.9,
+        analyze_synthetic=True,
+        n_analyze_samples=30
+    )
+    
+    print("\n💾 Saving model...")
+    joblib.dump(smote_pipeline, "models/logreg_smote_v1_3.joblib")
+    print("✅ Model saved!")
+    
+    joblib.dump(smote_pipeline.named_steps['tfidf'], 
+                "models/tfidf_smote_v1_3.joblib")
+    print("✅ Vectorizer saved!")
+
+if __name__ == "__main__":
+    main()
