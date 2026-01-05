@@ -13,10 +13,10 @@ import pandas as pd
 
 EMOTIONS_6 = {
     "love": ["admiration", "caring", "gratitude", "love", "neutral"],
-    "joy": ["amusement", "desire", "excitement", "joy", "optimism", "pride", "relief", "neutral"],
+    "joy": ["amusement", "desire", "joy", "optimism", "pride", "relief", "neutral"],
     "sadness": ["disappointment", "grief", "remorse", "sadness", "neutral"],
     "anger": ["anger", "annoyance", "disapproval", "disgust", "neutral"],
-    "surprise": ["confusion", "curiosity", "realization", "surprise", "neutral"],
+    "surprise": ["confusion", "curiosity", "excitement", "realization", "surprise", "neutral"],
     "fear": ["embarrassment", "fear", "nervousness", "neutral"]
 }
 
