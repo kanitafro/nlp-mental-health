@@ -1,21 +1,27 @@
 # run 'python -m scripts.clean_risklabels' on terminal
 
-'''
-Cleans risk label datasets and saves cleaned versions.
-Assumes input CSVs are in data/risk_labels/ and saves to data/processed/
-'''
 import pandas as pd
 from tqdm import tqdm
 from preprocessing.clean_text import clean_text
 
 tqdm.pandas()
 
+'''
+Cleans risk label datasets and saves cleaned versions.
+Assumes input CSVs are in data/risk_labels/ and saves to data/processed/
+'''
+
 def clean_df(df):
     print("Labels: ", df['label'].unique())
+
     print("Cleaning text for transformer mode without NER tags:")
     df["clean_text_transf"] = df["text"].progress_apply(
         lambda x: clean_text(str(x), mode="transformer")
     )
+
+    # Keep only cleaned text column
+    df = df.drop('text', axis=1)
+    df = df.rename(columns={'clean_text_transf': 'text'})
 
     return df
 
