@@ -113,8 +113,11 @@ def fit_tfidf_vectorizer(
         analyzer="word"  # word-level tokens
     )
 
-    # C — fit
-    X = vectorizer.fit_transform(augmented_texts)
+    # C — fit on augmented texts to learn all vocabulary, including special tokens
+    vectorizer.fit(augmented_texts)
+
+    # Now, transform only the original texts to get X with the correct number of samples
+    X = vectorizer.transform(texts)
 
     # D — save if needed
     if save_path:
