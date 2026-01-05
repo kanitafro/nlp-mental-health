@@ -1,3 +1,5 @@
+# run 'python -m scripts.clean_dataset' on terminal
+
 import pandas as pd
 from tqdm import tqdm
 from preprocessing.clean_text import clean_text
@@ -22,6 +24,7 @@ def run_cleaning_pipeline():
             print(col)
     # rename label 'sad' to 'sadness'
     df['label'] = df['label'].replace('sad', 'sadness')
+    df['label'] = df['label'].replace('suprise', 'surprise')
     print("Labels: ", df['label'].unique())
 
     print("=== Clean 6 labels dataset ===")
