@@ -1,10 +1,12 @@
 # Journal-based Emotion Recognition
 !!!**not finished**!!!
 
-This model trains on 6 emotions and 28 emotions.
+## Project Description
+
+
 
 ## Instructions
-1. After cloning this repository, download the datasets from the sources and rename the files as instructed in [*data/raw* README](https://github.com/kanitafro/pinpilinpauxa/tree/main/data/raw). The first dataset will be renamed to `dataset_6labels.csv` and the other to `goemotions.csv` as it's used in the code. Then put them into the *data/raw* folder.
+1. After cloning this repository, download the datasets from the sources and rename the files as instructed in [*data/raw* README](https://github.com/kanitafro/pinpilinpauxa/tree/main/data/raw). The first dataset will be renamed to `dataset_6labels.csv` (6 labels) and the other to `goemotions.csv` (28 labels - *not yet integrated for training*) as it's used in the code. Then put them into the *data/raw* folder.
 2. Before running `main.py`, you need to run the dataset cleaning pipeline in the *scripts* folder by typing this into the command prompt in the root directory (it will take around 10 minutes):  
 
    ```
