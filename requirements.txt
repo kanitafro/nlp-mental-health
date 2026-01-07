@@ -16,3 +16,6 @@ imbalanced-learn
 matplotlib
 seaborn
 hf_xet
+plotly
+typing
+collections
