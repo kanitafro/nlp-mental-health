@@ -48,12 +48,14 @@ def map_lexicon_emotions_to_6(cleaned_dict):
         for subtheme, data in subthemes.items():
             keywords = data.get("keywords", [])
             emo_list_27 = data.get("emotions", [])
+            requires_lexical_evidence = data.get("requires_lexical_evidence", False)
 
             emo_list_6 = map_emotions_list_6(emo_list_27)
 
             output[theme][subtheme] = {
                 "keywords": keywords,
-                "emotions": emo_list_6
+                "emotions": emo_list_6,
+                "requires_lexical_evidence": requires_lexical_evidence
             }
 
     return output
@@ -69,13 +71,15 @@ def lexicon_to_dataframe(lexicon_dict):
         for subtheme, data in subthemes.items():
             keywords = data.get("keywords", [])
             emotions = data.get("emotions", [])
+            requires_lexical_evidence = data.get("requires_lexical_evidence", False)
 
             for kw in keywords:
                 rows.append({
                     "Theme": theme,
                     "Subtheme": subtheme,
                     "Keyword": kw,
-                    "Emotion_6": ", ".join(emotions)
+                    "Emotion_6": ", ".join(emotions),
+                    "Requires_Lexical_Evidence": requires_lexical_evidence
                 })
 
     return pd.DataFrame(rows)
