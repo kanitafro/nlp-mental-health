@@ -1,4 +1,7 @@
 
+from sympy import true
+
+
 def get_lexicon():
     lexicon = {
         "Mental Health": {
@@ -9,9 +12,11 @@ def get_lexicon():
                     "lost interest", "no motivation", "lifeless", "gloomy", "broken", "isolated",
                     "tearful", "heavy heart", "feeling dead inside", "dark thoughts", "no energy",
                     "giving up", "self-loathing", "feeling like a burden", "nothing matters",
-                    "emptiness inside", "losing the spark", "losing spark"
+                    "emptiness inside", "losing the spark", "losing spark", "anhedonia", "lost my spark",
+                    "what do i do", "i feel lost", "i feel so lost", "low affect"
                 ],
-                "emotions": ["sadness", "nervousness", "grief", "disgust"]
+                "emotions": ["sadness", "nervousness", "grief", "disgust"],
+                "requires_lexical_evidence" : False
             },
             "Anxiety": {
                 "keywords": [
@@ -20,9 +25,13 @@ def get_lexicon():
                     "dread", "butterflies", "shortness of breath", "trembling", "fidgeting",
                     "sweaty palms", "fear of failure", "overwhelmed by thoughts", "insomnia",
                     "on edge", "intrusive thoughts", "catastrophizing", "fear of judgment",
-                    "can't relax", "hyperventilating"
+                    "can't relax", "hyperventilating", "exam season", "social anxiety", "public speaking",
+                    "under pressure", "a lot of pressure", "performance anxiety", "imposter syndrome",
+                    "so much pressure", "assignments to do", "deadlines", "don't have time", "do not have time",
+                    "no time to breathe", "no space to breathe", "can't fail"
                 ],
-                "emotions": ["nervousness", "sadness", "fear", "anger"] # add anxiety after merging datasets
+                "emotions": ["nervousness", "sadness", "fear", "anger"],
+                "requires_lexical_evidence" : False
             },
             "Relief": {
                 "keywords": [
@@ -31,7 +40,8 @@ def get_lexicon():
                     "safe again", "no more pressure", "grateful it's over", "feeling better",
                     "unburdened", "peaceful", "relaxed", "letting go", "closure", "found peace"
                 ],
-                "emotions": ["relief", "gratitude", "optimism"]
+                "emotions": ["relief", "gratitude", "optimism"],
+                "requires_lexical_evidence" : False
             },
             "Resilience": {
                 "keywords": [
@@ -41,7 +51,8 @@ def get_lexicon():
                     "learned from it", "emotional strength", "grit", "perseverance", "staying hopeful",
                     "rebuilding", "rising again", "heal"
                 ],
-                "emotions": ["love", "pride", "relief", "optimism"]
+                "emotions": ["love", "pride", "relief", "optimism"],
+                "requires_lexical_evidence" : False
             },
             "Stress": {
                 "keywords": [
@@ -51,7 +62,8 @@ def get_lexicon():
                     "snapping easily", "emotionally drained", "overworked", "restless nights",
                     "too much going on", "feeling stuck", "tense muscles", "drained energy"
                 ],
-                "emotions": ["nervousness", "anger", "annoyance", "fear"]
+                "emotions": ["nervousness", "anger", "annoyance", "fear"],
+                "requires_lexical_evidence" : False
             },
             "Burnout": {
                 "keywords": [
@@ -61,7 +73,8 @@ def get_lexicon():
                     "brain fog", "can't keep up", "tired of everything", "emotional exhaustion",
                     "loss of purpose", "cynical", "depleted", "energy crash", "constant fatigue"
                 ],
-                "emotions": ["sadness", "annoyance", "neutral"]
+                "emotions": ["sadness", "annoyance", "neutral"],
+                "requires_lexical_evidence" : False
             },
             "Coping strategies": {
                 "keywords": [
@@ -72,7 +85,8 @@ def get_lexicon():
                     "digital detox", "time off", "emotional regulation", "reaching out", "deep breathing",
                     "therapy", "psychiatrist", "psychology", "CBT", "DBT", "psychologist"
                 ],
-                "emotions": ["relief", "caring", "love", "pride", "neutral"]
+                "emotions": ["relief", "caring", "love", "pride", "neutral"],
+                "requires_lexical_evidence" : True
             },
             "Self-harm risk": {
                 "keywords": [
@@ -81,7 +95,8 @@ def get_lexicon():
                     "harming myself", "self-inflicted pain", "emotional pain", "invisible wounds", "desperate",
                     "lost the will to live", "hurting inside", "done with everything", "bruising", "cover up scars"
                 ],
-                "emotions": ["sadness", "disgust", "disappointment"]
+                "emotions": ["sadness", "disgust", "disappointment"],
+                "requires_lexical_evidence" : False
             },
             "Suicidal": {
                 "keywords": [
@@ -94,7 +109,8 @@ def get_lexicon():
                     "better off without me", "suicide note", "letter", "note", "jump", "jump off",
                     "lost the will to live", "no will to live", "trapped", "i'm sorry", "hopeless"
                 ],
-                "emotions": ["sadness", "disgust", "disappointment"] # add suicidal here after merging datasets
+                "emotions": ["sadness", "disgust", "disappointment"], # add suicidal here after merging datasets
+                "requires_lexical_evidence" : False
             },
             "Substance use": {
                 "keywords": [
@@ -104,7 +120,8 @@ def get_lexicon():
                     "losing control", "numbing the pain", "relapse risk", "clean for a week",
                     "under the influence", "binge drinking", "staying clean"
                 ],
-                "emotions": ["sadness", "disgust", "disappointment", "fear", "anger", "disapproval"]
+                "emotions": ["sadness", "disgust", "disappointment", "fear", "anger", "disapproval"],
+                "requires_lexical_evidence" : True
             },
             "Risk-taking": {
                 "keywords": [
@@ -114,7 +131,8 @@ def get_lexicon():
                     "chasing excitement", "spontaneous", "testing limits", "high-risk",
                     "impulsive decisions", "thrill-seeking", "not thinking straight", "adrenaline rush"
                 ],
-                "emotions": ["fear", "anger", "curiosity", "excitement"]
+                "emotions": ["fear", "anger", "curiosity", "excitement", "surprise"],
+                "requires_lexical_evidence" : True
             }
         },
         "Grief & Loss": {
@@ -126,7 +144,8 @@ def get_lexicon():
                     "pain", "anguish", "heartache", "feeling lost", "emotional pain",
                     "mourning a loved one", "life feels empty", "unbearable sadness"
                 ],
-                "emotions": ["sadness", "grief", "remorse", "love"]
+                "emotions": ["sadness", "grief", "remorse", "love", "surprise"],
+                "requires_lexical_evidence" : False
             },
             "Mourning": {
                 "keywords": [
@@ -136,7 +155,8 @@ def get_lexicon():
                     "sending thoughts", "comforted in sorrow", "attending funeral", "loss ritual",
                     "keeping memory alive", "deceased"
                 ],
-                "emotions": ["grief", "sadness"]
+                "emotions": ["grief", "sadness"],
+                "requires_lexical_evidence" : False
             },
             "Nostalgia": {
                 "keywords": [
@@ -146,7 +166,8 @@ def get_lexicon():
                     "photo albums", "storytelling", "sentimental journey", "bittersweet feelings",
                     "recalling laughter", "warm memories", "recalling traditions"
                 ],
-                "emotions": ["sadness", "confusion", "neutral"]
+                "emotions": ["sadness", "confusion", "neutral"],
+                "requires_lexical_evidence" : False
             },
             "Missing someone": {
                 "keywords": [
@@ -156,7 +177,8 @@ def get_lexicon():
                     "separation pain", "wish you were near", "craving your presence", "distance hurts",
                     "wishing you were back", "left behind", "yearning", "thinking of old times", "lonely"
                 ],
-                "emotions": ["sadness", "grief", "love"]
+                "emotions": ["sadness", "grief", "love"],
+                "requires_lexical_evidence" : False
             },
             "Loneliness": {
                 "keywords": [
@@ -166,7 +188,8 @@ def get_lexicon():
                     "empty heart", "hollow", "confinement", "craving connection", "feeling left behind",
                     "yearning for companionship", "solitude pain", "isolation"
                 ],
-                "emotions": ["sadness", "grief"]
+                "emotions": ["sadness", "grief"],
+                "requires_lexical_evidence" : False
             },
             "Regret": {
                 "keywords": [
@@ -177,11 +200,12 @@ def get_lexicon():
                     "wish I could turn back time", "second-guessing", "feeling accountable",
                     "repentance", "rueful"
                 ],
-                "emotions": ["remorse", "sadness", "grief", "disappointment", "embarrassment", "disgust"]
+                "emotions": ["remorse", "sadness", "grief", "disappointment", "embarrassment", "disgust"],
+                "requires_lexical_evidence" : False
             }
         },
 
-        "SPIRITUALITY": {
+        "Spirituality": {
             "Faith": {
                 "keywords": [
                     "soul", "spirit", "higher power", "inner peace", "divine", "connection", "faith",
@@ -190,7 +214,8 @@ def get_lexicon():
                     "sacred", "transcendence", "spiritual journey", "surrender", "grace", "sacred path",
                     "cosmic energy", "sacred presence"
                 ],
-                "emotions": ["gratitude", "love", "remorse", "relief", "admiration", "joy", "curiosity"]
+                "emotions": ["gratitude", "love", "remorse", "relief", "admiration", "joy", "surprise", "curiosity"],
+                "requires_lexical_evidence" : True
             },
             "Prayer": {
                 "keywords": [
@@ -201,7 +226,8 @@ def get_lexicon():
                     "silent prayer", "mindful prayer", "guided meditation", "spiritual petition",
                     "lighting incense", "prayer beads"
                 ],
-                "emotions": ["gratitude", "love", "remorse", "relief", "admiration"]
+                "emotions": ["gratitude", "love", "remorse", "relief", "admiration"],
+                "requires_lexical_evidence": True
             },
             "Meaning-making": {
                 "keywords": [
@@ -211,7 +237,8 @@ def get_lexicon():
                     "seeking truth", "ultimate reality", "inner guidance", "life questions",
                     "existential inquiry", "finding God", "path to Nirvana", "discovering inner self"
                 ],
-                "emotions": ["confusion", "curiosity", "love", "surprise", "optimism", "realization", "nervousness", "surprise", "fear"]
+                "emotions": ["confusion", "curiosity", "love", "surprise", "optimism", "realization", "nervousness", "surprise", "fear"],
+                "requires_lexical_evidence" : True
             },
             "Doubt": {
                 "keywords": [
@@ -222,7 +249,8 @@ def get_lexicon():
                     "existential doubt", "moral uncertainty", "seeking clarity", "soul unrest",
                     "spiritual questioning", "struggling with scripture", "faith shaken"
                 ],
-                "emotions": ["curiosity", "nervousness", "annoyance", "disappointment", "confusion", "sadness"]
+                "emotions": ["curiosity", "nervousness", "annoyance", "disappointment", "confusion", "surprise", "sadness"],
+                "requires_lexical_evidence" : True
             },
             "Purpose": {
                 "keywords": [
@@ -232,7 +260,8 @@ def get_lexicon():
                     "reason for existence", "self-actualization", "true path", "life direction",
                     "awakening", "fulfilling potential", "inner purpose", "cosmic plan", "sacred duty"
                 ],
-                "emotions": ["curiosity", "nervousness", "realization", "excitement", "surprise", "neutral"]
+                "emotions": ["curiosity", "nervousness", "realization", "excitement", "surprise", "neutral"],
+                "requires_lexical_evidence" : True
             },
             "Mortality": {
                 "keywords": [
@@ -242,7 +271,8 @@ def get_lexicon():
                     "legacy", "remembering mortality", "accepting death", "preparing for afterlife",
                     "finite existence", "impermanent nature", "spiritual mortality", "mortality reflection"
                 ],
-                "emotions": ["sadness", "grief", "remorse", "grief", "curiosity", "neutral"]
+                "emotions": ["sadness", "grief", "remorse", "grief", "surprise", "curiosity", "neutral"],
+                "requires_lexical_evidence" : True
             },
             "Religion": {
                 "keywords": [
@@ -268,10 +298,11 @@ def get_lexicon():
                     "Al-Muqsit", "Al-Jami'", "Al-Ghani", "Al-Mughni", "Al-Mani'", "Ad-Darr", "An-Nafi'",
                     "An-Nur", "Al-Hadi", "Al-Badi'", "Al-Baqi", "Al-Warith", "Ar-Rashid", "As-Sabur"
                 ],
-                "emotions": ["gratitude", "love", "relief", "remorse", "neutral", "joy"]
+                "emotions": ["gratitude", "love", "relief", "remorse", "neutral", "surprise", "joy"],
+                "requires_lexical_evidence" : True
             }
         },
-        "RELATIONSHIPS & SOCIAL LIFE": {
+        "Relationships & Social Life": {
             "Family": {
                 "keywords": [
                     "mother", "father", "parents", "siblings", "family", "arguments", "upbringing",
@@ -293,7 +324,8 @@ def get_lexicon():
                     "family business", "family support", "family conflict", "dysfunction", "reconciliation",
                     "unconditional love", "tough love", "tension", "peace", "harmony", "chaos"
                 ],
-                "emotions": ["love", "caring", "disapproval", "approval", "nervousness", "relief", "joy", "anger", "sadness", "gratitude", "disappointment"]
+                "emotions": ["love", "caring", "disapproval", "approval", "nervousness", "relief", "joy", "anger", "sadness", "gratitude", "disappointment"],
+                "requires_lexical_evidence" : True
             },
             "Friendship": {
                 "keywords": [
@@ -312,7 +344,8 @@ def get_lexicon():
                     "social media friends", "ignore", "new friend", "old friend", "long-distance friendship",
                     "growing apart", "jealousy", "competition", "comparison", "third wheel"
                 ],
-                "emotions": ["love", "caring", "admiration", "gratitude", "neutral", "approval", "grief", "sadness"]
+                "emotions": ["love", "caring", "admiration", "gratitude", "neutral", "approval", "grief", "sadness"],
+                "requires_lexical_evidence" : True
             },
             "Love life": {
                 "keywords": [
@@ -333,7 +366,8 @@ def get_lexicon():
                     "pining", "obsession", "possessiveness", "control", "manipulation", "gaslighting",
                     "trust issues", "vulnerability", "fear of commitment", "fear of abandonment"
                 ],
-                "emotions": ["love", "caring", "joy", "admiration", "desire", "surprise", "disappointment", "sadness", "gratitude"]
+                "emotions": ["love", "caring", "joy", "admiration", "desire", "surprise", "disappointment", "sadness", "gratitude"],
+                "requires_lexical_evidence" : True
             },
             "Conflict/apology": {
                 "keywords": [
@@ -342,7 +376,8 @@ def get_lexicon():
                     "regret", "insult", "quarrel", "confrontation", "dispute", "reconciliation",
                     "grudges", "yelling", "shouting", "misunderstanding", "anger", "conflict management"
                 ],
-                "emotions": ["anger", "disappointment", "annoyance", "disapproval", "confusion"]
+                "emotions": ["anger", "disappointment", "annoyance", "disapproval", "surprise", "confusion"],
+                "requires_lexical_evidence" : True
             },
             "Gratitude": {
                 "keywords": [
@@ -351,7 +386,8 @@ def get_lexicon():
                     "respect", "heartfelt thanks", "gratitude note", "compliment", "expressing thanks",
                     "feeling blessed", "showing appreciation", "grateful heart", "thankful for you"
                 ],
-                "emotions": ["gratitude", "admiration", "caring", "love"]
+                "emotions": ["gratitude", "admiration", "caring", "love"],
+                "requires_lexical_evidence" : False
             },
             "Social support": {
                 "keywords": [
@@ -360,7 +396,8 @@ def get_lexicon():
                     "shoulder to lean on", "mentorship", "cheering up", "consolation", "reassurance",
                     "solidarity", "caring", "checking in", "advocacy", "resource sharing", "hard times"
                 ],
-                "emotions": ["joy", "gratitude", "caring"]
+                "emotions": ["joy", "gratitude", "caring"],
+                "requires_lexical_evidence": True
             },
             "Cultural events": {
                 "keywords": [
@@ -370,11 +407,12 @@ def get_lexicon():
                     "cultural workshops", "storytelling events", "dance performances",
                     "costume festivals", "seasonal festivals", "folk festivals", "traditional celebrations"
                 ],
-                "emotions": ["joy", "excitement", "amusement"]
+                "emotions": ["joy", "excitement", "surprise", "amusement"],
+                "requires_lexical_evidence": True
             }
         },
 
-        "IDENTITY & SELF-PERCEPTION": {
+        "Identity & Self-Perception": {
             "Self-esteem": {
                 "keywords": [
                     "confident", "insecure", "proud", "ashamed", "believe in myself", "self-worth",
@@ -383,7 +421,8 @@ def get_lexicon():
                     "feeling weak", "valuing myself", "feeling accomplished", "self-love", "self-acceptance",
                     "feeling inferior", "ego", "feeling validated"
                 ],
-                "emotions": ["joy", "sadness", "pride", "remorse", "pride", "fear"]
+                "emotions": ["joy", "sadness", "pride", "remorse", "pride", "fear"],
+                "requires_lexical_evidence" : False
             },
             "Self-discovery": {
                 "keywords": [
@@ -394,7 +433,8 @@ def get_lexicon():
                     "uncovering strengths", "embracing weaknesses", "questioning beliefs",
                     "defining purpose", "self-exploration"
                 ],
-                "emotions": ["curiosity", "joy", "confusion", "relief", "surprise", "realization", "excitement"]
+                "emotions": ["curiosity", "joy", "confusion", "relief", "surprise", "realization", "excitement"],
+                "requires_lexical_evidence" : True
             },
             "Gender/identity exploration": {
                 "keywords": [
@@ -404,7 +444,8 @@ def get_lexicon():
                     "pride", "gender transition", "embracing identity", "exploring identity", "identity affirmation",
                     "self-acceptance", "representation", "inclusivity"
                 ],
-                "emotions": ["fear", "joy", "pride", "confusion", "love", "nervousness", "neutral"]
+                "emotions": ["fear", "joy", "pride", "surprise", "confusion", "love", "nervousness", "neutral"],
+                "requires_lexical_evidence" : True
             },
             "Boundary-setting": {
                 "keywords": [
@@ -414,7 +455,8 @@ def get_lexicon():
                     "preventing burnout", "self-preservation", "prioritizing self", "maintaining autonomy",
                     "stopping manipulation", "saying 'enough'", "respecting others' boundaries", "consent", "assertiveness"
                 ],
-                "emotions": ["pride", "fear", "relief", "nervousness", "disapproval"]
+                "emotions": ["pride", "fear", "relief", "nervousness", "disapproval"],
+                "requires_lexical_evidence" : True
             },
             "Shame": {
                 "keywords": [
@@ -423,10 +465,11 @@ def get_lexicon():
                     "inner critic", "remorse", "feeling flawed", "disgrace", "feeling dirty", "shame spiral",
                     "humiliation in public", "regretful", "cringe", "self-reproach", "embarrassment"
                 ],
-                "emotions": ["remorse", "disgust", "sadness", "fear", "anger", "embarrassment"]
+                "emotions": ["remorse", "disgust", "sadness", "fear", "anger", "embarrassment"],
+                "requires_lexical_evidence" : False
             }
     },
-    "DESCRIPTIVE & SENSORY WRITING": {
+    "Descriptive & Sensory Writing": {
             "Environment/setting": {
                 "keywords": [
                     "room", "city", "park", "forest", "ocean", "nature", "surroundings", "street", "alley",
@@ -435,7 +478,8 @@ def get_lexicon():
                     "village square", "bustling market", "abandoned building", "cozy cabin",
                     "open field", "dense jungle", "quiet library", "dimly lit room", "crowded café"
                 ],
-                "emotions": ["admiration", "fear", "relief", "nervousness", "surprise", "curiosity", "neutral"]
+                "emotions": ["admiration", "fear", "relief", "nervousness", "surprise", "curiosity", "neutral"],
+                "requires_lexical_evidence" : True
             },
             "Weather/seasonality": {
                 "keywords": [
@@ -443,9 +487,10 @@ def get_lexicon():
                     "breeze", "sunny", "wind", "drizzle", "downpour", "hail", "thunderstorm", "lightning",
                     "fog", "mist", "overcast", "cloudy", "clear sky", "frost", "icy", "humid", "muggy",
                     "crisp air", "chilly", "warm rays", "golden sunlight", "gentle breeze", "gusty wind",
-                    "blustery", "serene weather", "seasonal change", "twilight glow"
+                    "blustery", "serene weather", "seasonal change", "twilight glow", "dawn light", "dusk hues"
                 ],
-                "emotions": ["joy", "sadness", "fear", "relief", "amusement", "neutral"]
+                "emotions": ["joy", "sadness", "fear", "relief", "amusement", "neutral"],
+                "requires_lexical_evidence" : True
             },
             "Physical sensations": {
                 "keywords": [
@@ -455,7 +500,8 @@ def get_lexicon():
                         "comfort", "goosebumps", "fluttering", "pounding", "lightheaded", "sweaty palms",
                         "chills", "electric sensation", "heavy limbs", "soft caress", "prickly"
                 ],
-                "emotions": ["fear", "joy", "anger", "relief", "nervousness", "disgust"]
+                "emotions": ["fear", "joy", "anger", "relief", "nervousness", "disgust"],
+                "requires_lexical_evidence" : True
             },
             "Aesthetic": {
                 "keywords": [
@@ -469,7 +515,8 @@ def get_lexicon():
                         "scarlet", "jade", "lavender", "navy", "pastel", "neon", "earthy tones",
                         "muted shades", "vibrant hues"
                 ],
-                "emotions": ["admiration", "joy", "curiosity", "relief", "excitement", "desire"]
+                "emotions": ["admiration", "joy", "curiosity", "surprise", "relief", "excitement", "desire"],
+                "requires_lexical_evidence" : True
             },
             "Physical descriptions": {
                 "keywords": [
@@ -484,7 +531,8 @@ def get_lexicon():
                         "beard", "mustache", "stubble", "expressive eyebrows", "delicate hands", "calloused hands",
                         "graceful posture", "confident stance", "nervous fidgeting", "warm smile", "shy smile", "stern look"
                 ],
-                "emotions": ["admiration", "fear", "nervousness", "disgust", "curiosity", "desire", "annoyance", "neutral"]
+                "emotions": ["admiration", "fear", "nervousness", "disgust", "curiosity", "desire", "annoyance", "neutral"],
+                "requires_lexical_evidence" : True
             },
             "Sensory": {
                 "keywords": [
@@ -494,11 +542,12 @@ def get_lexicon():
                         "tangy", "rich", "muted", "dazzling", "shimmering", "glowing", "sparkling", "shadowy",
                         "dark", "luminous", "vibrant", "hazy", "translucent", "opaque"
                 ],
-                "emotions": ["relief", "disgust", "joy", "fear", "admiration", "annoyance"]
+                "emotions": ["relief", "disgust", "joy", "fear", "admiration", "annoyance"],
+                "requires_lexical_evidence" : True
             }
-    },
+        },
 
-    "LIFESTYLE & LIFE EVENTS": {
+        "Lifestyle & Life Events": {
             "Career": {
                 "keywords": [
                         "job", "interview", "boss", "promotion", "resign", "career path", "work stress", "raise",
@@ -508,7 +557,8 @@ def get_lexicon():
                         "overtime", "contract", "responsibilities", "multitasking", "career pivot",
                         "entrepreneurship", "employee", "employer"
                 ],
-                "emotions": ["confusion", "disappointment", "pride", "fear", "joy", "nervousness", "optimism", "neutral"]
+                "emotions": ["confusion", "surprise", "disappointment", "pride", "fear", "joy", "nervousness", "optimism", "neutral"],
+                "requires_lexical_evidence" : True
             },
             "Housing": {
                 "keywords": [
@@ -516,9 +566,11 @@ def get_lexicon():
                         "mortgage", "landlord", "lease", "neighborhood", "relocation", "furniture",
                         "renovation", "interior design", "moving boxes", "property", "backyard", "garden",
                         "utilities", "decorating", "cozy", "cluttered", "minimalist", "cramped", "spacious",
-                        "suburban", "urban", "cityscape", "homely", "temporary housing"
+                        "suburban", "urban", "cityscape", "homely", "temporary housing", "loan application",
+                        "real estate", "open house", "inspection", "security deposit", "moving truck", "loan"
                 ],
-                "emotions": ["neutral", "excitement", "nervousness", "relief", "fear", "joy"]
+                "emotions": ["neutral", "excitement", "nervousness", "relief", "fear", "joy"],
+                "requires_lexical_evidence" : True
             },
             "Finances": {
                 "keywords": [
@@ -526,9 +578,11 @@ def get_lexicon():
                         "interest", "credit card", "bank account", "emergency fund", "financial planning",
                         "investing", "taxes", "rent", "grocery bills", "subscription", "spending habits",
                         "budgeting app", "paycheck-to-paycheck", "wealth", "frugal", "expensive", "luxury",
-                        "savings goal", "financial stress", "retirement fund", "managing money"
+                        "savings goal", "financial stress", "retirement fund", "managing money", "accountant",
+                        "financial advisor", "side hustle", "income stream", "passive income", "financial freedom"
                 ],
-                "emotions": ["nervousness", "fear", "relief", "disappointment", "joy"]
+                "emotions": ["nervousness", "fear", "relief", "disappointment", "joy"],
+                "requires_lexical_evidence" : True
             },
             "Health events": {
                 "keywords": [
@@ -537,9 +591,12 @@ def get_lexicon():
                         "check-up", "vaccination", "follow-up", "health scare", "physical therapy",
                         "mental health check", "hospitalization", "side effects", "rehabilitation", "fatigue",
                         "doctor's appointment", "lab tests", "MRI", "X-ray", "procedure", "health insurance",
-                        "symptom management", "cancer", "tumor", "hospice", "palliative"
+                        "symptom management", "cancer", "tumor", "hospice", "palliative", "remission", "relapse",
+                        "wellness visit", "annual physical", "health monitoring", "health crisis", "emergency room", 
+                        "ICU", "ER", "ambulance", "first aid", "CPR", "defibrillator", "stitches", "cast", "splint"
                 ],
-                "emotions": ["fear", "nervousness", "relief", "grief", "optimism", "sadness", "disgust", "surprise"]
+                "emotions": ["fear", "nervousness", "relief", "grief", "optimism", "sadness", "disgust", "surprise"],
+                "requires_lexical_evidence" : True
             },
             "Parenthood": {
                 "keywords": [
@@ -547,9 +604,13 @@ def get_lexicon():
                         "maternal leave", "paternal leave", "first trimester", "second trimester", "third trimester",
                         "trimester", "breastfeeding", "newborn", "toddler", "diaper", "parenting", "adoption",
                         "parenting stress", "bonding", "lullaby", "bedtime routine", "school age", "parenting milestone",
-                        "vaccination", "playdate", "family planning", "childcare", "nanny", "parenting advice"
+                        "vaccination", "playdate", "family planning", "childcare", "nanny", "parenting advice",
+                        "parenting challenges", "single parenthood", "co-parenting", "parenting style", "discipline",
+                        "child development", "parent-teacher conference", "single mom", "single dad", "foster parenting",
+                        "single parent", "step-parent", "blended family", "parenting win", "parenting fail", "throw a tantrum"
                 ],
-                "emotions": ["joy", "love", "nervousness", "fear", "caring", "pride", "admiration"]
+                "emotions": ["joy", "love", "nervousness", "fear", "caring", "pride", "admiration"],
+                "requires_lexical_evidence" : True
             },
             "Goals": {
                 "keywords": [
@@ -559,7 +620,8 @@ def get_lexicon():
                         "fitness goal", "habit goal", "education goal", "learning objective", "motivation",
                         "step-by-step plan", "measurable outcome", "checklist"
                 ],
-                "emotions": ["curiosity", "excitement", "nervousness", "pride", "fear", "joy", "optimism"]
+                "emotions": ["curiosity", "excitement", "nervousness", "pride", "fear", "joy", "optimism"],
+                "requires_lexical_evidence" : True
             },
             "Decision-making": {
                 "keywords": [
@@ -567,9 +629,11 @@ def get_lexicon():
                         "decision making", "choices", "decision", "uncertainty", "indecision", "pondering",
                         "analyzing", "brainstorming", "evaluating", "risk assessment", "gut feeling",
                         "intuition", "judgment", "prioritizing", "compromise", "selecting", "options", "solution",
-                        "alternative", "trade-off", "strategy", "deliberation", "mental weighing"
+                        "alternative", "trade-off", "strategy", "deliberation", "mental weighing", "finalizing choice",
+                        "making up my mind", "second-guessing", "overthinking", "seeking advice", "consulting others"
                 ],
-                "emotions": ["nervousness", "confusion", "fear", "relief"]
+                "emotions": ["nervousness", "confusion", "surprise", "fear", "relief"],
+                "requires_lexical_evidence" : True
             },
             "Hopes": {
                 "keywords": [
@@ -577,9 +641,10 @@ def get_lexicon():
                         "goal-setting", "long-term plan", "next chapter", "life goals", "bucket list", "next steps",
                         "planning", "looking forward", "excitement", "anticipation", "aspirations for family",
                         "travel plans", "retirement plan", "career vision", "personal vision", "optimistic",
-                        "foresight", "goal visualization"
+                        "foresight", "goal visualization", "hope dies last", "future possibilities", "dream big", "dreaming big"
                 ],
-                "emotions": ["excitement", "pride", "joy", "curiosity", "optimism", "fear", "confusion"]
+                "emotions": ["excitement", "pride", "joy", "curiosity", "optimism", "fear", "confusion"],
+                "requires_lexical_evidence" : False
             },
             "Routines": {
                 "keywords": [
@@ -587,9 +652,12 @@ def get_lexicon():
                         "meditation", "breakfast", "commute", "work routine", "study schedule", "nightly rituals",
                         "cleaning routine", "self-care", "journaling", "yoga", "stretching", "productivity habits",
                         "time management", "habit tracker", "consistent", "habitual", "repetitive tasks",
-                        "weekend routine", "meal prep", "bedtime ritual", "fitness regimen"
+                        "weekend routine", "meal prep", "bedtime ritual", "fitness regimen", "fitness routine",
+                        "workout schedule", "daily planner", "to-do list", "prioritizing tasks", "focus time", "deep work",
+                        "deep focus", "distraction-free", "time blocking", "pomodoro technique", "pomodoro"
                 ],
-                "emotions": ["relief", "neutral", "pride", "nervousness"]
+                "emotions": ["relief", "neutral", "pride", "nervousness"],
+                "requires_lexical_evidence" : True
             },
             "Habits": {
                 "keywords": [
@@ -600,7 +668,8 @@ def get_lexicon():
                         "alcohol consumption", "impulsive buying", "routine behavior", "habitual action",
                         "addiction", "screen time", "routine habit"
                 ],
-                "emotions": ["disgust", "pride", "embarrassment", "amusement", "anger", "relief"]
+                "emotions": ["disgust", "pride", "embarrassment", "amusement", "anger", "relief"],
+                "requires_lexical_evidence" : True
             },
             "Performance/productivity": {
                 "keywords": [
@@ -611,7 +680,8 @@ def get_lexicon():
                         "distraction", "deadlines looming", "task-oriented", "accountability",
                         "work ethic", "momentum", "progress", "procrastinate"
                 ],
-                "emotions": ["fear", "pride", "annoyance", "amusement", "nervousness", "joy", "neutral"]
+                "emotions": ["fear", "pride", "annoyance", "amusement", "nervousness", "joy", "neutral"],
+                "requires_lexical_evidence" : True
             },
             "Entertainment": {
                 "keywords": [
@@ -621,7 +691,8 @@ def get_lexicon():
                         "fanfiction", "gaming", "eSports", "board games", "video games",
                         "card games", "cinema", "film reviews"
                 ],
-                "emotions": ["joy", "excitement", "relief", "amusement", "surprise"]
+                "emotions": ["joy", "excitement", "relief", "amusement", "surprise"],
+                "requires_lexical_evidence" : True
             },
             "Arts & crafts": {
                 "keywords": [
@@ -631,7 +702,8 @@ def get_lexicon():
                         "digital art", "collage", "textile art", "jewelry making", "handmade crafts",
                         "mural painting", "creative expression"
                 ],
-                "emotions": ["joy", "amusement", "annoyance", "pride", "relief", "curiosity", "nautral"]
+                "emotions": ["joy", "amusement", "annoyance", "pride", "relief", "curiosity", "neutral"],
+                "requires_lexical_evidence" : True
             },
             "Recreation": {
                 "keywords": [
@@ -641,7 +713,8 @@ def get_lexicon():
                         "dance", "Zumba", "team sports", "individual sports", "kayaking", "canoeing",
                         "surfing", "camping", "outdoor recreation", "fishing", "golf", "gymnastics"
                 ],
-                "emotions": ["joy", "excitement", "pride", "frustration", "relief", "neutral"]
+                "emotions": ["joy", "excitement", "pride", "frustration", "relief", "neutral"],
+                "requires_lexical_evidence" : True
             },
             "Travel & adventure": {
                 "keywords": [
@@ -651,10 +724,11 @@ def get_lexicon():
                         "journey", "weekend getaway", "travel photography", "exploring new cultures",
                         "adventure travel", "hiking trail", "travel planning", "guided tour"
                 ],
-                "emotions": ["excitement", "fear", "joy", "relief", "amusement", "neutral", "curiosity"]
+                "emotions": ["excitement", "fear", "joy", "relief", "amusement", "neutral", "curiosity"],
+                "requires_lexical_evidence" : True
             }
-    },
-    "MEMORY & REFLECTION": {
+        },
+        "Memory & Reflection": {
             "Recollection": {
                 "keywords": [
                         "remember", "recalling", "reminiscing", "flashback", "thinking back", "nostalgia",
@@ -664,7 +738,8 @@ def get_lexicon():
                         "cherished moments", "treasured memories", "vivid flashback", "recalling childhood",
                         "remembering friends", "remembering family", "remembering experiences", "used to"
                 ],
-                "emotions": ["joy", "sadness", "love", "grief", "neutral"]
+                "emotions": ["joy", "sadness", "love", "grief", "neutral"],
+                "requires_lexical_evidence" : True
             },
             "Time passing": {
                 "keywords": [
@@ -675,7 +750,8 @@ def get_lexicon():
                         "swift passage", "moving through life", "life's journey", "ephemeral", "transient",
                         "aging gracefully", "wrinkles", "memories fading", "life evolving"
                 ],
-                "emotions": ["sadness", "pride", "curiosity", "grief", "relief", "realization", "neutral"]
+                "emotions": ["sadness", "pride", "curiosity", "grief", "relief", "realization", "neutral"],
+                "requires_lexical_evidence" : True
             },
             "Learning from past": {
                 "keywords": [
@@ -686,10 +762,11 @@ def get_lexicon():
                         "self-reflection", "thinking critically", "introspection", "transformation",
                         "maturity", "gaining perspective", "lessons of life", "growth mindset", "becoming stronger"
                 ],
-                "emotions": ["pride", "disgust", "opimism", "realization", "neutral"]
+                "emotions": ["pride", "disgust", "opimism", "realization", "neutral"],
+                "requires_lexical_evidence" : True
             }
         },
-        "HEALTH & BODY": {
+        "Health & Body": {
                 "Physical health concerns": {
                     "keywords": [
                             "pain", "fatigue", "sick", "illness", "treatment", "medicine", "doctor", "fever",
@@ -700,7 +777,8 @@ def get_lexicon():
                             "heart rate", "health scare", "contagious", "physical strain",
                             "aches", "cramps"
                     ],
-                    "emotions": ["fear", "anger", "nervousness", "sadness", "optimism", "surprise"]
+                    "emotions": ["fear", "anger", "nervousness", "sadness", "optimism", "surprise"],
+                    "requires_lexical_evidence" : True
                 },
                 "Body image": {
                     "keywords": [
@@ -712,7 +790,8 @@ def get_lexicon():
                             "makeup", "style", "self-perception", "physique", "toned", "unfit",
                             "reflection", "personal aesthetics"
                     ],
-                    "emotions": ["disgust", "pride", "embarrassment", "annoyance", "neutral", "admiration"]
+                    "emotions": ["disgust", "pride", "embarrassment", "annoyance", "neutral", "admiration"],
+                    "requires_lexical_evidence" : True
                 },
                 "Sleep/fatigue": {
                     "keywords": [
@@ -723,7 +802,8 @@ def get_lexicon():
                             "night owl", "difficulty falling asleep", "restless mind", "overworked", "burnout",
                             "sleepyhead", "fatigue from work", "energy crash"
                     ],
-                    "emotions": ["annoyance", "exhaustion", "anger", "neutral", "relief", "sadness"]
+                    "emotions": ["annoyance", "exhaustion", "anger", "neutral", "relief", "sadness"],
+                    "requires_lexical_evidence" : True
                 },
                 "Exercise": {
                     "keywords": [
@@ -734,7 +814,8 @@ def get_lexicon():
                             "core workout", "endurance", "flexibility", "agility", "stamina", "physical activity",
                             "fitness routine", "warm-up", "cool-down", "exercise goal", "outdoor exercise"
                     ],
-                    "emotions": ["optimism", "pride", "pain", "joy", "amusement", "neutral"]
+                    "emotions": ["optimism", "pride", "pain", "joy", "amusement", "neutral"],
+                    "requires_lexical_evidence" : True
                 },
                 "Diet & nutrition": {
                     "keywords": [
@@ -747,11 +828,11 @@ def get_lexicon():
                             "calories", "macronutrients", "superfoods", "supplements", "hydration", "dieting",
                             "mindful eating", "portion control", "nutrition tracking"
                     ],
-                    "emotions": ["neutral", "disgust", "relief", "pride"]
+                    "emotions": ["neutral", "disgust", "relief", "pride"],
+                    "requires_lexical_evidence" : True
                 }
-        },
-
-        "TECHNOLOGY & MODERN LIFE": {
+            },
+            "Technology & Modern Life": {
                 "Social media": {
                     "keywords": [
                             "Instagram", "TikTok", "likes", "followers", "online", "validation", "scrolling", "Twitter",
@@ -761,7 +842,8 @@ def get_lexicon():
                             "unfollowing", "digital identity", "online presence", "social comparison", "fear of missing out",
                             "social approval", "friend requests", "live streaming", "virtual community"
                     ],
-                    "emotions": ["nervousness", "approval", "embarrassment", "disgust", "sadness", "pride", "neutral"]
+                    "emotions": ["nervousness", "approval", "embarrassment", "disgust", "sadness", "pride", "neutral"],
+                    "requires_lexical_evidence" : True
                 },
                 "Digital distraction": {
                     "keywords": [
@@ -773,11 +855,12 @@ def get_lexicon():
                             "app notifications", "Wi-Fi", "mobile device", "streaming", "digital immersion",
                             "time sink", "ads", "advertisement"
                     ],
-                    "emotions": ["annoyance", "nervousness", "anger", "amusement", "neutral"]
+                    "emotions": ["annoyance", "nervousness", "anger", "amusement", "neutral"],
+                    "requires_lexical_evidence" : True
                 }
             },
 
-            "JUSTICE & VALUES": {
+            "Justice & Values ": {
                 "Fairness": {
                     "keywords": [
                             "unfair", "discrimination", "equality", "rights", "protest", "injustice", "bias", "prejudice",
@@ -786,9 +869,10 @@ def get_lexicon():
                             "underrepresented", "favoritism", "racism", "sexism", "ageism", "classism", "harassment", "exclusion",
                             "unequal opportunity", "standing up for justice", "accountability", "demanding fairness", "unfair advantage"
                     ],
-                    "emotions": ["anger", "annoyance", "nervousness", "realization"]
+                    "emotions": ["anger", "annoyance", "nervousness", "realization"],
+                    "requires_lexical_evidence" : True
                 },
-                "Ethics/moral dilemmas": {
+                "Moral dilemmas": {
                     "keywords": [
                             "right or wrong", "integrity", "conscience", "moral", "honesty", "ethical", "virtue", "values",
                             "doing the right thing", "ethical decision", "moral conflict", "responsibility", "duty",
@@ -797,7 +881,8 @@ def get_lexicon():
                             "self-reflection on actions", "moral responsibility", "ethical judgment",
                             "fairness in actions", "personal ethics"
                     ],
-                    "emotions": ["disapproval", "disgust", "pride", "nervousness", "realization", "confusion"]
+                    "emotions": ["disapproval", "disgust", "pride", "nervousness", "realization", "confusion"],
+                    "requires_lexical_evidence" : True
                 },
                 "Boundaries vs exploitation": {
                     "keywords": [
@@ -808,10 +893,11 @@ def get_lexicon():
                             "protecting oneself", "asserting limits", "toxic relationships", "emotional abuse",
                             "safeguarding boundaries", "unfair advantage"
                     ],
-                    "emotions": ["anger", "disgust", "fear", "annoyance", "neutral", "disapproval"]
+                    "emotions": ["anger", "disgust", "fear", "annoyance", "neutral", "disapproval"],
+                    "requires_lexical_evidence" : True
                 }
-        },
-        "ACADEMIC": {
+            },
+            "Academic": {
                 "School": {
                     "keywords": [
                             "school", "class", "teacher", "classmate", "test", "notes", "high school", "freshman",
@@ -821,7 +907,8 @@ def get_lexicon():
                             "group project", "exam prep", "detention", "school event", "peer", "academic year",
                             "school spirit", "school club", "student council"
                     ],
-                    "emotions": ["nervousness", "excitement", "joy", "neutral", "pride", "approval"]
+                    "emotions": ["nervousness", "excitement", "joy", "neutral", "pride", "approval"],
+                    "requires_lexical_evidence" : True
                 },
                 "Assignments": {
                     "keywords": [
@@ -832,7 +919,8 @@ def get_lexicon():
                             "writing task", "assignment guidelines", "project proposal", "brainstorming",
                             "problem set", "practical work"
                     ],
-                    "emotions": ["nervousness", "annoyance", "pride", "curiosity", "neutral", "fear"]
+                    "emotions": ["nervousness", "annoyance", "pride", "curiosity", "neutral", "fear"],
+                    "requires_lexical_evidence" : True
                 },
                 "Exams": {
                     "keywords": [
@@ -842,9 +930,10 @@ def get_lexicon():
                             "time management", "cheating", "retake", "curve grading", "cumulative exam", "performance evaluation",
                             "final project", "evaluation", "test anxiety"
                     ],
-                    "emotions": ["fear", "nervousness", "relief", "pride", "disappointment", "sadness", "joy"]
+                    "emotions": ["fear", "nervousness", "relief", "pride", "disappointment", "sadness", "joy"],
+                    "requires_lexical_evidence" : True
                 },
-                "University/college": {
+                "University": {
                     "keywords": [
                             "campus", "dorm", "professor", "major", "degree", "tuition", "lecture hall", "auditorium",
                             "Bachelors", "Masters", "PhD", "thesis", "dissertation", "defense", "postgraduate", "advisor",
@@ -852,12 +941,21 @@ def get_lexicon():
                             "orientation", "campus tour", "college event", "scholarship", "financial aid", "registration",
                             "credits", "elective", "compulsory course", "academic advisor", "graduate school", "faculty", "college"
                     ],
-                    "emotions": ["excitement", "neutral", "overwhelm", "pride", "nervousness", "accomplishment", "fear"]
+                    "emotions": ["excitement", "neutral", "overwhelm", "pride", "nervousness", "accomplishment", "fear"],  
+                    "requires_lexical_evidence" : True
                 },
                 "Research": {
                     "keywords": [
-                            "lab", "experiment", "paper", "data", "citation", "publication", "research", "methodology", "survey", "analysis", "dataset", "findings", "literature review", "journal", "conference", "peer review", "fieldwork", "replication study", "theoretical framework", "hypothesis", "qualitative study", "quantitative study", "case study", "research proposal", "experiment design", "lab report", "statistical analysis", "research ethics", "research assistant", "research question", "results", "data collection", "observation", "experimentation"],
-                    "emotions": ["curiosity", "neutral", "nervousness", "pride", "confusion"]
+                            "lab", "experiment", "paper", "data", "citation", "publication", "research", "methodology", 
+                            "survey", "analysis", "dataset", "findings", "literature review", "journal", "abstract", 
+                            "introduction", "discussion", "conclusion", "references", "appendix", "thesis",
+                            "conference", "peer review", "fieldwork", "replication study", "theoretical framework", 
+                            "hypothesis", "qualitative study", "quantitative study", "case study", "research proposal", 
+                            "experiment design", "lab report", "statistical analysis", "research ethics", "research assistant", 
+                            "research question", "results", "data collection", "observation", "experimentation"
+                    ],
+                    "emotions": ["curiosity", "neutral", "nervousness", "pride", "confusion"],
+                    "requires_lexical_evidence" : True
                 }
         }
 
