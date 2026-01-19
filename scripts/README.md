@@ -1,0 +1,1 @@
+NOTE: You **don't** need to run `risk_ngrams.py`. This will give raw n-grams extracted from risk datasets (n=1,...,6), the reviewed dictionary is provided in _data/risk_labels/risk_ngrams_reviewed.json_. This file will be used in inference to 'justify' the outputted risk scores.
