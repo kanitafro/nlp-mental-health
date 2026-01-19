@@ -1,6 +1,4 @@
-
 from sympy import true
-
 
 def get_lexicon():
     lexicon = {
@@ -371,9 +369,10 @@ def get_lexicon():
             },
             "Conflict/apology": {
                 "keywords": [
-                    "argument", "fight", "sorry", "forgive me", "misunderstanding", "resentment",
+                    "argument", "fight", "sorry", "forgive me", "misunderstanding", "resentment", "forgiveness",
+                    "apology", "make amends", "peace offering", "heated discussion","compromise", "dispute",
                     "disagreement", "tension", "blame", "criticism", "harsh words", "conflict resolution",
-                    "regret", "insult", "quarrel", "confrontation", "dispute", "reconciliation",
+                    "regret", "insult", "quarrel", "confrontation", "dispute", "reconciliation", "forgiving",
                     "grudges", "yelling", "shouting", "misunderstanding", "anger", "conflict management"
                 ],
                 "emotions": ["anger", "disappointment", "annoyance", "disapproval", "surprise", "confusion"],
@@ -506,14 +505,14 @@ def get_lexicon():
             "Aesthetic": {
                 "keywords": [
                         "beautiful", "color", "light", "scenery", "art", "music", "poetry", "aesthetic", "vibe",
-                        "stunning", "exquisite", "radiant", "dazzling", "enchanting", "vibrant", "delicate",
-                        "vivid", "surreal", "whimsical", "harmonious", "soft", "muted", "textured", "intricate",
+                        "stunning", "exquisite", "radiant", "dazzling", "enchanting", "vibrant", "delicate", "neutral tones",
+                        "vivid", "surreal", "whimsical", "harmonious", "soft", "muted", "textured", "intricate", "pastel",
                         "minimalist", "bold", "ethereal", "moody", "serene", "dramatic", "captivating", "magical",
-                        "enchanting", "atmospheric", "dreamy", "blue", "purple", "yellow", "orange", "black",
-                        "white", "grey", "periwinkle", "magenta", "cyan", "brown", "green", "red", "turquoise",
-                        "indigo", "lilac", "gold", "silver", "bronze", "coral", "beige", "teal", "amber", "cream",
-                        "scarlet", "jade", "lavender", "navy", "pastel", "neon", "earthy tones",
-                        "muted shades", "vibrant hues"
+                        "enchanting", "atmospheric", "dreamy", "blue", "purple", "yellow", "orange", "black", "pink",
+                        "white", "grey", "periwinkle", "magenta", "cyan", "brown", "green", "red", "turquoise", "violet",
+                        "indigo", "lilac", "gold", "silver", "bronze", "coral", "beige", "teal", "amber", "cream", "burgundy",
+                        "scarlet", "jade", "lavender", "navy", "pastel", "neon", "earthy tones", "vibrant", "vibrancy of colours",
+                        "muted shades", "vibrant hues", "colour", "colors", "colours", "colorful", "colourful", "vibrancy of colours"
                 ],
                 "emotions": ["admiration", "joy", "curiosity", "surprise", "relief", "excitement", "desire"],
                 "requires_lexical_evidence" : True
