@@ -4,6 +4,8 @@
 
 _Faculty of Electrical Engineering, University of Sarajevo_
 
+<img width="600" height="400" alt="Image" src="https://github.com/user-attachments/assets/2de60f51-dcae-4e77-861e-b5d9f65382a0" />
+
 ## Table of Contents
 
 - [Journal-based Emotion Recognition and Risk Detection using BERT](#journal-based-emotion-recognition-and-risk-detection-using-bert)
