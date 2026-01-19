@@ -28,8 +28,6 @@ Ultimately, the model will:
 2. Encode using a shared BERT encoder
 3. Compute emotion logits and risk logits
 4. Optimize standard loss functions
-5. **No** lenient decoding
-6. **No** theme or lexicon logic applied
 
 ### Inference Phase
 1. Compute emotion probabilities (softmax)
@@ -114,10 +112,50 @@ It is **not** a diagnostic or clinical decision-making tool.
    This will output the scores for emotions and risks, then inferred themes from the lexicon, and finally the human interpretation report in form of full sentences. Add any examples in the `texts` list located in main() of `test_inference.py`. Aside from the terminal output, the full report for the tested examples will be saved to _bert/json_files/test_inference_output.json_.
 ---
 
-## Results
+## RESULTS
+
+### Emotion Classification
+
+<img width="666" height="547" alt="Image" src="https://github.com/user-attachments/assets/9b470821-52ff-4434-9a9a-8c3c94d382a7" /> 
+
+              		  precision    recall     f1-score   support
+
+            anger  	    0.9097      0.9695    0.9387     17794
+             fear	  	0.9615      0.8276    0.8895     14894
+              joy   	0.9633      0.9092    0.9355     42920
+             love    	0.7402      0.8855    0.8063     17207
+          sadness    	0.9754      0.9400    0.9573     36355
+         surprise       0.7556      0.8955    0.8196      6792
+
+         accuracy 	                    	  0.9127    135962
+        macro avg	    0.8843      0.9045    0.8912    135962
+     weighted avg 	    0.9207      0.9127    0.9146    135962
+   
+
+
+### Risk Detection
+
+<img width="691" height="547" alt="Image" src="https://github.com/user-attachments/assets/8d220bc9-2d3a-42b2-9619-00519391ba60" />
+
+| Risk Category | Precision | Recall | F1-score | AUROC | Support |
+|---------------|-----------|--------|----------|-------|---------|
+| Depression    | 0.94      | 0.96   | 0.95     | 0.990 | 4,768   |
+| Self-harm     | 1.00      | 0.99   | 0.993    | 0.999 | 592     |
+| Suicidal      | 0.999     | 0.97   | 0.99     | 0.997 | 3,194   |
+| Grief         | 0.99      | 0.97   | 0.98     | 0.998 | 820     |
+
+#### Optimal thresholds found:
+    "depression": 0.9,
+    "selfharm": 0.09,
+    "suicidal": 0.08,
+    "grief": 0.06
 
 
 ---
+
+## Inference
+
+Inference shows ranked emotions (softmax output) and probabilities for each risk flag directly from the model. Then the themes are inferred using the theme lexicon (+ detected emotions) and the rest of the inference design is for defining reasoning behind the detected emotions and risks and to ultimately display them in humanly interpretative sentences.
 
 ## Lenient Emotion Decoding
 
