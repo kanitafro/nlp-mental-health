@@ -4,6 +4,40 @@
 
 _Faculty of Electrical Engineering, University of Sarajevo_
 
+## Table of Contents
+
+- [Journal-based Emotion Recognition and Risk Detection using BERT](#journal-based-emotion-recognition-and-risk-detection-using-bert)
+  - [Project Description](#project-description)
+  - [Repository Structure](#repository-structure)
+  - [Training and Inference Pipeline](#training-and-inference-pipeline)
+    - [Training Phase](#training-phase)
+    - [Inference Phase](#inference-phase)
+  - [Joint Emotion Recognition and Risk Detection](#joint-emotion-recognition-and-risk-detection)
+    - [Emotion Recognition](#emotion-recognition)
+    - [Risk Detection](#risk-detection)
+  - [Model Architecture](#model-architecture)
+  - [Training Objective](#training-objective)
+  - [Disclaimer](#disclaimer)
+  - [Instructions](#instructions)
+  - [Results](#results)
+    - [Emotion Classification](#emotion-classification)
+    - [Risk Detection](#risk-detection-1)
+  - [Inference](#inference)
+  - [Lenient Emotion Decoding](#lenient-emotion-decoding)
+    - [Strategy](#strategy)
+  - [Uncertainty-Aware Emotion Interpretation](#uncertainty-aware-emotion-interpretation)
+  - [Risk Thresholding: Non-Arbitrary Design](#risk-thresholding-non-arbitrary-design)
+    - [Clinical Framing](#clinical-framing)
+  - [Evidence-Augmented Interpretation Gates](#evidence-augmented-interpretation-gates)
+    - [Depression-Specific Handling](#depression-specific-handling)
+  - [Post-hoc Textual Grounding](#post-hoc-textual-grounding)
+  - [Subtheme Detection and Disclosure Filtering](#subtheme-detection-and-disclosure-filtering)
+    - [Disclosure Threshold](#disclosure-threshold)
+    - [Lexical Gating](#lexical-gating)
+  - [Design Principles](#design-principles)
+  - [Future Work](#future-work)
+
+
 ## Project Description
 Build a three-layer NLP system for journal entries:
 * Layer 1: Emotion recognition → 6/28 emotions (starting with 6)
@@ -20,6 +54,72 @@ Ultimately, the model will:
 * Infer:
    * **Themes**: depression, religion, spirituality
 * Later be integrated into a lightweight mobile app (through API)
+
+## Repository Structure
+
+```
+├── bert/
+│   ├── dataset.py                       # dataset class
+│   ├── inference.py                     # inference logic functions
+│   ├── lenient_decoding.py         # for love and surprise only
+│   ├── lexicon_utils.py                 # loading and preparing lexicon for inference
+│   ├── metrics.py                         # computing metrics for emotions and risks
+│   ├── model_utils.py                  # model, optimizer, scheduler, early stopping
+│   ├── multitask_model.py           # defining the multitasking
+│   ├── test_inference.py               # RUN inference
+│   ├── train.py                               # RUN training
+│   ├── visualize_dashboard.py      # combined plots in 4 parts
+│   ├── visualize_metrics.py            # for creating plots
+│
+├── data/
+│   ├── __init__.py
+│   ├── raw/                       # Original datasets (instructions for downloading data)
+│   │   ├── more_surprise.csv
+│   ├── processed/                 # Cleaned & preprocessed text data
+│   ├── lexicon/
+│   │   ├── lexicon_raw.py      # The raw Python dict (editable)
+│   │   ├── build_lexicon.py      # load raw dict, save raw, clean it, then save cleaned
+│   │   ├── lexicon.csv     # Original theme lexicon (get from build_lexicon)
+│   │   ├── lexicon.json
+│   │   ├── lexicon_clean.csv   # Cleaned lexicon  (get from build_lexicon)
+│   │   ├── lexicon_clean.json
+│   │   ├── lexicon_clean_6.csv   # 28 to 6 emotions (get from map_emotion_to_lexicon)
+│   │   ├── lexicon_clean_6.json
+│   ├── risk_labels/
+│   │   ├── reddit_depression.csv    # manually scraped dataset
+│   │   ├── reddit_grief.csv    # manually scraped dataset
+│   │   ├── reddit_selfharm.csv    # manually scraped dataset
+│   │   ├── reddit_suicidal.csv    # manually scraped dataset
+│
+├── models/          # traditional ML models (currently only has Logistic Regression)
+│       ├── train_logreg_v1.py
+│
+├── notebooks/
+│   ├── merge_love_surprise.ipynb     # RUN this notebook after fetching all emotion datasets
+│
+├── preprocessing/
+│   ├── clean_text.py              # Full text-cleaning pipeline
+│   ├── text_utils.py              # Helper functions (emoji map, slang, etc.)
+│   ├── tokenizer.py        # Custom tokenizer (with NER and mode switches)
+│   ├── clean_lexicon.py    # Cleans the theme lexicon automatically
+│   ├── map_emotions.py      # mapping logic (28 to 6 emotions)
+│
+├── scripts/    	  # will be run separately before running main.py
+│   ├── clean_dataset.py                         # from loading to cleaning dataset
+│   ├── clean_risklabels.py	                   # cleans risk datasets (for transformer only)
+│   ├── map_emotion_to_lexicon.py        # runs everything related to lexicon
+│   ├── risk_ngrams.py 	                   # extracts n-grams from risk datasets (n=1,...,6)
+│   
+├── utils/
+│   ├── __init__.py        
+│   ├── file_io.py                           # load/save helpers
+│   ├── smote_oversampling        # for ML models
+│
+├── requirements.txt
+├── .gitignore
+└── README.md
+
+```
 
 ## Training and Inference Pipeline
 
