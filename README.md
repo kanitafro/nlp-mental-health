@@ -1,24 +1,44 @@
 # Journal-based Emotion Recognition
-!!!**not finished**!!!
+
+### **Author**: Kanita Tafro 
+
+_Faculty of Electrical Engineering, University of Sarajevo_
 
 ## Project Description
 
 
 
 ## Instructions
-1. After cloning this repository, download the datasets from the sources and rename the files as instructed in [*data/raw* README](https://github.com/kanitafro/pinpilinpauxa/tree/main/data/raw). The first dataset will be renamed to `dataset_6labels.csv` (6 labels) and the other to `goemotions.csv` (28 labels - *not yet integrated for training*) as it's used in the code. Then put them into the *data/raw* folder.
-2. Before running `main.py`, you need to run the dataset cleaning pipeline in the *scripts* folder by typing this into the command prompt in the root directory (it will take around 10 minutes):  
-
+1. After cloning this repository, download the datasets from the sources and rename the files as instructed in [*data/raw* README](https://github.com/kanitafro/pinpilinpauxa/tree/main/data/raw). The first dataset will be renamed to `dataset_6labels.csv` (6 labels) and will be merged with 5 other datasets to used in training. Put them all into *data/raw/* folder and name them as instructed. Merging of the 5 secondary datasets is done in the notebook *notebooks/merge_love_surprise.ipynb*.
+2. Before running training, it is necessary to run the dataset cleaning pipeline in the *scripts* folder by typing this into the command prompt in the root directory (it will take around 10 minutes):
+   
    ```
    python -m scripts.clean_dataset
    ```
-3. Run the lexicon build pipeline. It converts the raw Python dict into csv and json (`lexicon.csv`, `lexicon.json`) then it uses the clean_text() function from *utils* to lowercase the lexicon and strip it from punctuations (used in ML mode, not transformer) and outputs 2 new files (`lexicon_clean.csv`, `lexicon_clean.json`). Finally, it maps the 28 emotions to only 6 defined in *preprocessing/map_emotions.py* and outputs 2 new files (`lexicon_clean_6.csv`, `lexicon_clean_6.json`). All files will be located in *data/lexicon*. Type this into the command prompt in the root directory:
+   After this script finishes, the full dataset will be in *data/processed/dataset6_labels_clean_more.csv*. The emotions dataset is ready for training but there's one more component before that.
+3. **RISK FLAG DATASETS**: There are 4 datasets in *data/risk_labels/* that are meant for risk flag detection. The only thing you need to do is to run the script from root of the directory in the terminal:
+   
+   ```
+   python -m scripts.clean_risklabels
+   ```
+4. **TRAINING**: Run `bert/train.py` (to recreate the obtained results run the following command from the *bert/* folder):
+
+   ```
+   python train.py  --epochs 2 --batch_size 16 --accumulation_steps 2 --learning_rate 2.8e-5 --use_risk_flags --early_stopping --patience 1 --save_checkpoints --dropout_rate 0.2 --model_version v1_1
+   ```
+   By running this command, the model will train for 2 epochs for around 12 hours on a GPU. The final model as `v1_1_epoch_2.pt` will be saved to *bert/checkpoints_v1_1/*. All metrics will be saved to *bert/saved_models/trained_model_v1_1/*.  
+5. **INFERENCE PREPARATION**: Run the lexicon build pipeline. It converts the raw Python dict into csv and json (`lexicon.csv`, `lexicon.json`) then it uses the clean_text() function from *utils* to lowercase the lexicon and strip it from punctuations (used in ML mode, not transformer) and outputs 2 new files (`lexicon_clean.csv`, `lexicon_clean.json`). Finally, it maps the 28 emotions to only 6 defined in *preprocessing/map_emotions.py* and outputs 2 new files (`lexicon_clean_6.csv`, `lexicon_clean_6.json`). All files will be located in *data/lexicon*. Type this into the command prompt in the root directory:
 
    ```
    python -m scripts.map_emotion_to_lexicon
    ```
-4. Run `main.py`:
+6. **INFERENCE**: From the _bert/_ folder, run:
 
    ```
-   python main.py
+   python test_inference.py
    ```
+   This will output the scores for emotions and risks, then inferred themes from the lexicon, and finally the human interpretation report in form of full sentences. Add any examples in the `texts` list located in main() of `test_inference.py`. Aside from the terminal output, the full report for the tested examples will be saved to _bert/json_files/test_inference_output.json_.
+
+
+
+
