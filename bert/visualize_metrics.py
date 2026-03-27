@@ -6,22 +6,38 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc
 
 
-def plot_confusion_matrix(cm, labels=None, label_names=None, save_to=None):
+def plot_confusion_matrix(cm, labels=None, label_names=None, save_to=None, normalize=True):
     if label_names is None:
         label_names = labels  # fallback to integer labels
 
+    # Row-normalize to percentages so each true class sums to 100%.
+    # This makes class-wise errors comparable under class imbalance.
+    if normalize:
+        row_sums = cm.sum(axis=1, keepdims=True)
+        cm_plot = np.divide(cm, row_sums, out=np.zeros_like(cm, dtype=float), where=row_sums != 0)
+        annot = np.array([[f"{v * 100:.1f}%" for v in row] for row in cm_plot])
+        fmt = ""
+        vmin, vmax = 0, 1
+    else:
+        cm_plot = cm
+        annot = True
+        fmt = "d"
+        vmin, vmax = None, None
+
     plt.figure(figsize=(8, 6))
     sns.heatmap(
-        cm,
-        annot=True,
-        fmt="d",
+        cm_plot,
+        annot=annot,
+        fmt=fmt,
         cmap="Blues",
+        vmin=vmin,
+        vmax=vmax,
         xticklabels=label_names,
         yticklabels=label_names,
     )
     plt.ylabel("True")
     plt.xlabel("Predicted")
-    plt.title("Confusion Matrix")
+    plt.title("Confusion Matrix (%)" if normalize else "Confusion Matrix")
 
     if save_to:
         os.makedirs(os.path.dirname(save_to), exist_ok=True)
