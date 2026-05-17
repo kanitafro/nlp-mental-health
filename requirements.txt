@@ -19,3 +19,7 @@ hf_xet
 plotly
 typing
 collections
+nlpaug
+openpyxl
+sacremoses
+sentencepiece
