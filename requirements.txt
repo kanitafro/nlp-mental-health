@@ -21,3 +21,5 @@ typing
 collections
 nlpaug
 openpyxl
+sacremoses
+sentencepiece
