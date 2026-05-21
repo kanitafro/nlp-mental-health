@@ -1,5 +1,13 @@
 # run 'python -m scripts.clean_dataset' on terminal
 
+import sys
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 import argparse
 
 import pandas as pd
@@ -9,17 +17,17 @@ from preprocessing.map_emotions import REVERSE_MAP, map_emotions_df_column
 
 tqdm.pandas()
 
-path_raw_goemotions = "data/raw/goemotions_processed.csv"
-path_raw_love_surprise = "data/raw/love_surprise_bonus.csv"
+path_raw_goemotions = REPO_ROOT / "data" / "raw" / "goemotions_processed.csv"
+#path_raw_love_surprise = "data/raw/love_surprise_bonus.csv"
 #path_raw_disgust = "data/raw/disgust_bonus.csv"
-path_raw_6labels = "data/raw/dataset_6labels_more.csv"
-path_raw_7labels = "data/raw/dataset_7labels.csv"
+path_raw_6labels = REPO_ROOT / "data" / "raw" / "dataset_6labels_more.csv"
+path_raw_7labels = REPO_ROOT / "data" / "raw" / "dataset_7labels.csv"
 
-dir_cleaned = "data/processed"
-path_cleaned_6labels = f"{dir_cleaned}/dataset_6labels_clean.csv"
-path_cleaned_6labels_more = f"{dir_cleaned}/dataset_6labels_clean_more.csv"
-path_cleaned_goemotions = f"{dir_cleaned}/goemotions.csv"
-path_cleaned_7labels = f"{dir_cleaned}/dataset_7labels_clean.csv"
+dir_cleaned = REPO_ROOT / "data" / "processed"
+path_cleaned_6labels = dir_cleaned / "dataset_6labels_clean.csv"
+path_cleaned_6labels_more = dir_cleaned / "dataset_6labels_clean_more.csv"
+path_cleaned_goemotions = dir_cleaned / "goemotions.csv"
+path_cleaned_7labels = dir_cleaned / "dataset_7labels_clean.csv"
 
 
 def clean_df(df, mode="all", transf_ner_tags=False, ml_ner_tags=False):
@@ -69,18 +77,17 @@ def clean_df(df, mode="all", transf_ner_tags=False, ml_ner_tags=False):
 
     return df
 
-def run_cleaning_pipeline_6emotions():
+def run_cleaning_pipeline_450k(input_path, output_path, num_labels=6):
     # Load datasets
-    print("Loading dataset (6 emotions)...")
-    df = pd.read_csv(path_raw_6labels)
+    print(f"=== Clean {num_labels} labels dataset ===")
+    print("Loading dataset...")
+    df = pd.read_csv(input_path)
+    print(f"Loaded dataset with {len(df)} rows")
 
-    print("Loading dataset (love & surprise)...")
-    df_love_surprise = pd.read_csv(path_raw_love_surprise)
-
-    print("Loading dataset (disgust)...")
-    df_disgust = pd.read_csv(path_raw_disgust)
-
-    print(f"Loaded dataset_6labels.csv with {len(df)} rows")
+    print(f"\nLabels ({num_labels} emotions): ", df['label'].unique())
+    print("Cleaning...")
+    df = clean_df(df, transf_ner_tags=True, ml_ner_tags=True)
+    print(f"\nCleaned dataset size: {len(df)}")
 
     # rename columns of full dataset to be 'text' and 'label'
     df = df.rename(columns={'sentence': 'text', 'emotion': 'label'})
@@ -90,37 +97,13 @@ def run_cleaning_pipeline_6emotions():
             print(col, end=", ")
         else:
             print(col)
-    
-    # rename label 'sad' to 'sadness'
-    df['label'] = df['label'].replace('sad', 'sadness')    
-    # rename label 'suprise' to 'surprise' (fix typo)
+
+    df['label'] = df['label'].replace('sad', 'sadness')
     df['label'] = df['label'].replace('suprise', 'surprise')
-    print("Labels: ", df['label'].unique())
 
-    print("=== Clean 6 labels dataset ===")
-    df = clean_df(df)
-
-    print("\n=== Clean love & surprise dataset ===")
-    print("Labels: ", df_love_surprise['label'].unique())
-    df_love_surprise = clean_df(df_love_surprise)
-
-    print("\n=== Clean disgust dataset ===")
-    print("Labels: ", df_disgust['label'].unique())
-    df_disgust = clean_df(df_disgust)
-
-    # Save output
-    df.to_csv(path_cleaned_6labels, index=False)
-    print(f"Saved cleaned 6-emotions dataset -> {path_cleaned_6labels}")
-
-    df_merged = pd.concat([df, df_love_surprise], ignore_index=True)
-    df_merged.to_csv(path_cleaned_6labels_more, index=False)
-    print("\nMerged dataset size: ", len(df_merged))
-    print(f"Saved merged cleaned 6-emotions dataset -> {path_cleaned_6labels_more}")
-
-    df_merged = pd.concat([df, df_love_surprise, df_disgust], ignore_index=True)
-    df_merged.to_csv(path_cleaned_7labels, index=False)
-    print("\nMerged dataset size: ", len(df_merged))
-    print(f"Saved merged cleaned 7-emotions dataset -> {path_cleaned_7labels}")
+    # Save output (6 labels)
+    df.to_csv(output_path, index=False)
+    print(f"Saved cleaned {num_labels}-emotions dataset -> {output_path}")
 
 
 def run_cleaning_pipeline_goemotions():
@@ -132,9 +115,9 @@ def run_cleaning_pipeline_goemotions():
 
     print(f"Loaded {path_raw_goemotions} with {len(df_goemotions)} rows")
     print("=== Clean GoEmotions dataset ===")
-    df_goemotions = clean_df(df_goemotions)
+    df_goemotions = clean_df(df_goemotions, transf_ner_tags=True, ml_ner_tags=True)
     df_goemotions.to_csv(path_cleaned_goemotions, index=False)
-    print(f"Saved cleaned GoEmotions dataset -> {path_cleaned_goemotions}")
+    print(f"Saved cleaned GoEmotions dataset -> {path_cleaned_goemotions}\n")
 
 
 def parse_args():
@@ -150,16 +133,25 @@ def parse_args():
 
 def run_cleaning_pipeline(action):
     if action == "clean_6emotions":
-        run_cleaning_pipeline_6emotions()
+        run_cleaning_pipeline_450k(path_raw_6labels, path_cleaned_6labels, num_labels=6)
+    elif action == "clean_7emotions":
+        run_cleaning_pipeline_450k(path_raw_7labels, path_cleaned_7labels, num_labels=7)
+    elif action== "clean_450k":
+        run_cleaning_pipeline_450k(path_raw_6labels, path_cleaned_6labels, num_labels=6)
+        run_cleaning_pipeline_450k(path_raw_7labels, path_cleaned_7labels, num_labels=7)
     elif action == "clean_goemotions":
         run_cleaning_pipeline_goemotions()
     elif action == "clean_all":
-        run_cleaning_pipeline_6emotions()
+        run_cleaning_pipeline_450k(path_raw_6labels, path_cleaned_6labels, num_labels=6)
+        run_cleaning_pipeline_450k(path_raw_7labels, path_cleaned_7labels, num_labels=7)
         run_cleaning_pipeline_goemotions()
     else:
         raise ValueError(f"Unsupported action: {action}")
 
 
 if __name__=="__main__":
-    args = parse_args()
+    parser = argparse.ArgumentParser(description="Clean datasets for emotion modeling.")
+    parser.add_argument('--action', type=str, choices=['clean_6emotions', 'clean_7emotions', 'clean_450k', 'clean_goemotions', 'clean_all'], default='clean_all', help="Choose which cleaning pipeline to run.")
+    args = parser.parse_args()
+
     run_cleaning_pipeline(args.action)
