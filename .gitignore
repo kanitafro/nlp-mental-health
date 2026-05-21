@@ -11,3 +11,9 @@ logs/
 
 # Environment files (optional)
 .env
+
+notebooks/disgust_eda.ipynb
+notebooks/fear_eda.ipynb
+
+# Dataset uploads
+.csv

@@ -23,3 +23,5 @@ nlpaug
 openpyxl
 sacremoses
 sentencepiece
+scipy
+sympy
