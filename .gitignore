@@ -5,6 +5,8 @@ __pycache__/
 # Trained models
 saved_models/
 logs/
+json_files/
+checkpoints_v1_1/
 
 # Notebook checkpoints
 *.ipynb_checkpoints/
@@ -12,8 +14,16 @@ logs/
 # Environment files (optional)
 .env
 
+# Specific files to ignore
 notebooks/disgust_eda.ipynb
-notebooks/fear_eda.ipynb
+notebooks/merge_disgust.ipynb
+data/raw/inference_text.txt
 
 # Dataset uploads
-.csv
+*.csv
+data/raw/*.csv
+data/processed/*.csv
+data/raw/muhammadummarattique_data/
+
+*.pt
+
