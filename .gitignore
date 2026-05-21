@@ -19,11 +19,13 @@ notebooks/disgust_eda.ipynb
 notebooks/merge_disgust.ipynb
 data/raw/inference_text.txt
 
-# Dataset uploads
+# Data uploads
 *.csv
 data/raw/*.csv
 data/processed/*.csv
 data/raw/muhammadummarattique_data/
+data/risk_labels/*.json
+data/risk_labels/*.csv
 
 *.pt
 
