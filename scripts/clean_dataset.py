@@ -13,7 +13,6 @@ import argparse
 import pandas as pd
 from tqdm import tqdm
 from preprocessing.clean_text import clean_text
-from preprocessing.map_emotions import REVERSE_MAP, map_emotions_df_column
 
 tqdm.pandas()
 
