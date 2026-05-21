@@ -10,13 +10,16 @@ from preprocessing.map_emotions import REVERSE_MAP, map_emotions_df_column
 tqdm.pandas()
 
 path_raw_goemotions = "data/raw/goemotions_processed.csv"
-path_raw_6labels = "data/raw/dataset_6labels.csv"
 path_raw_love_surprise = "data/raw/love_surprise_bonus.csv"
+#path_raw_disgust = "data/raw/disgust_bonus.csv"
+path_raw_6labels = "data/raw/dataset_6labels_more.csv"
+path_raw_7labels = "data/raw/dataset_7labels.csv"
 
 dir_cleaned = "data/processed"
 path_cleaned_6labels = f"{dir_cleaned}/dataset_6labels_clean.csv"
 path_cleaned_6labels_more = f"{dir_cleaned}/dataset_6labels_clean_more.csv"
 path_cleaned_goemotions = f"{dir_cleaned}/goemotions.csv"
+path_cleaned_7labels = f"{dir_cleaned}/dataset_7labels_clean.csv"
 
 
 def clean_df(df, mode="all", transf_ner_tags=False, ml_ner_tags=False):
@@ -74,6 +77,9 @@ def run_cleaning_pipeline_6emotions():
     print("Loading dataset (love & surprise)...")
     df_love_surprise = pd.read_csv(path_raw_love_surprise)
 
+    print("Loading dataset (disgust)...")
+    df_disgust = pd.read_csv(path_raw_disgust)
+
     print(f"Loaded dataset_6labels.csv with {len(df)} rows")
 
     # rename columns of full dataset to be 'text' and 'label'
@@ -98,6 +104,10 @@ def run_cleaning_pipeline_6emotions():
     print("Labels: ", df_love_surprise['label'].unique())
     df_love_surprise = clean_df(df_love_surprise)
 
+    print("\n=== Clean disgust dataset ===")
+    print("Labels: ", df_disgust['label'].unique())
+    df_disgust = clean_df(df_disgust)
+
     # Save output
     df.to_csv(path_cleaned_6labels, index=False)
     print(f"Saved cleaned 6-emotions dataset -> {path_cleaned_6labels}")
@@ -106,6 +116,11 @@ def run_cleaning_pipeline_6emotions():
     df_merged.to_csv(path_cleaned_6labels_more, index=False)
     print("\nMerged dataset size: ", len(df_merged))
     print(f"Saved merged cleaned 6-emotions dataset -> {path_cleaned_6labels_more}")
+
+    df_merged = pd.concat([df, df_love_surprise, df_disgust], ignore_index=True)
+    df_merged.to_csv(path_cleaned_7labels, index=False)
+    print("\nMerged dataset size: ", len(df_merged))
+    print(f"Saved merged cleaned 7-emotions dataset -> {path_cleaned_7labels}")
 
 
 def run_cleaning_pipeline_goemotions():

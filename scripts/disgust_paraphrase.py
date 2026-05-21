@@ -24,8 +24,8 @@ def disgust_paraphrase():
     # ============================================
     # 1. LOAD DATA
     # ============================================
-    print("\n📂 Loading disgust_bonus.csv...")
-    df = pd.read_csv('../data/raw/disgust_bonus.csv')
+    print("\n📂 Loading disgust_original.csv...")
+    df = pd.read_csv('../data/raw/disgust_original.csv')
     original_texts = df['text'].tolist()
     print(f"Loaded {len(original_texts)} original disgust instances")
     

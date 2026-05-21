@@ -17,53 +17,93 @@ The merged datasets are saved as:
 """
 
 import argparse
+from pathlib import Path
+import sys
+
 import pandas as pd
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from utils.augment_disgust import augment_disgust
 
-path_raw_6labels = "../data/raw/dataset_6labels.csv"
-path_raw_love_surprise = "../data/raw/love_surprise_bonus.csv"
-path_raw_disgust = "../data/raw/disgust_all.csv"
+dir_raw = REPO_ROOT / "data" / "raw"
+path_raw_6labels = dir_raw / "dataset_6labels.csv"
+path_raw_love_surprise = dir_raw / "love_surprise_bonus.csv"
+path_raw_disgust = dir_raw / "disgust_all.csv"
 
-dir_raw = "../data/raw"
+
+def normalize_text_label_columns(df):
+    """Return a dataframe with a consistent text/label schema."""
+    rename_map = {}
+    if "sentence" in df.columns:
+        rename_map["sentence"] = "text"
+    if "emotion" in df.columns:
+        rename_map["emotion"] = "label"
+
+    df = df.rename(columns=rename_map)
+
+    required_columns = ["text", "label"]
+    missing_columns = [column for column in required_columns if column not in df.columns]
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {missing_columns}")
+
+    return df[required_columns]
 
 def merge_to_6labels():
+    print("=" * 50)
+    print("Creating merged 6-label dataset")
+    print("=" * 50)
     print("Loading full dataset (6 labels)...")
-    df = pd.read_csv(path_raw_6labels)
+    df = normalize_text_label_columns(pd.read_csv(path_raw_6labels))
 
     print("Loading dataset (love & surprise)...")
-    df_love_surprise = pd.read_csv(path_raw_love_surprise)
+    df_love_surprise = normalize_text_label_columns(pd.read_csv(path_raw_love_surprise))
 
     df_merged = pd.concat([df, df_love_surprise], ignore_index=True)
-    path_6labels_more = f"{dir_raw}/dataset_6labels_more.csv"
+    df_merged['label'] = df_merged['label'].replace('suprise', 'surprise')
+    df_merged['label'] = df_merged['label'].replace('sad', 'sadness')
+    
+    path_6labels_more = dir_raw / "dataset_6labels_more.csv"
     df_merged.to_csv(path_6labels_more, index=False)
 
     print("\nMerged dataset size: ", len(df_merged))
-    print(f"Value counts in 'label' column: {df_merged['label'].value_counts()}")
-    print(f"Saved merged 6-emotions dataset -> {path_6labels_more}")
+    print(f"Value counts in 'label' column: \n{df_merged['label'].value_counts()}")
+    print("Columns: ", df_merged.columns)
+    print(f"Saved merged 6-emotions dataset \n     -> {path_6labels_more}")
 
 def merge_to_7labels():
+    print("\n" + "=" * 50)
+    print("Creating merged 7-label dataset")
+    print("=" * 50)
     print("Loading full dataset (6 labels)...")
-    df = pd.read_csv(path_raw_6labels)
+    df = normalize_text_label_columns(pd.read_csv(path_raw_6labels))
 
     print("Loading dataset (love & surprise)...")
-    df_love_surprise = pd.read_csv(path_raw_love_surprise)
+    df_love_surprise = normalize_text_label_columns(pd.read_csv(path_raw_love_surprise))
 
     # If path to disgust not found then run the augment_disgust() to create the merged disgust dataset
-    if not path_raw_disgust:
-        print(f"Path to disgust dataset not found at {path_raw_disgust}. Running augment_disgust() to create the merged disgust dataset...\n")
-        augment_disgust()
 
-    print("Loading dataset (disgust)...")
-    df_disgust = pd.read_csv(path_raw_disgust)
-    
+    if not path_raw_disgust.exists():
+        print(f"Path to disgust dataset not found at {path_raw_disgust}.\nRunning augment_disgust() to create the merged disgust dataset...\n")
+        df_disgust = augment_disgust()
+    else:
+        print("Loading dataset (disgust)...")
+        df_disgust = normalize_text_label_columns(pd.read_csv(path_raw_disgust))
 
     df_merged = pd.concat([df, df_love_surprise, df_disgust], ignore_index=True)
-    path_7labels = f"{dir_raw}/dataset_7labels.csv"
+    df_merged['label'] = df_merged['label'].replace('suprise', 'surprise')
+    df_merged['label'] = df_merged['label'].replace('sad', 'sadness')
+
+    path_7labels = dir_raw / "dataset_7labels.csv"
     df_merged.to_csv(path_7labels, index=False)
 
     print("\nMerged dataset size: ", len(df_merged))
-    print(f"Value counts in 'label' column: {df_merged['label'].value_counts()}")
-    print(f"Saved merged 7-emotions dataset -> {path_7labels}")
+    print(f"Value counts in 'label' column: \n{df_merged['label'].value_counts()}")
+    print(f"Columns: {df_merged.columns}")
+    print(f"Saved merged 7-emotions dataset \n     -> {path_7labels}")
 
 if __name__ == "__main__":
     # Parse arguments (--label_num can be 6 or 7, if the argument is not provided, both merges will be run)

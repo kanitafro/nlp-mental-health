@@ -38,6 +38,7 @@ def augment_disgust():
 
     df_merged.to_csv("../data/raw/disgust_all.csv", index=False)
     print("Merged dataset saved to ../data/raw/disgust_all.csv")
+    return df_merged
 
 if __name__ == "__main__":
     augment_disgust()
