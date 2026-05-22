@@ -1,3 +1,11 @@
+import sys
+import os
+
+# Add project root to Python path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 # run 'python -m scripts.map_emotion_to_lexicon' on terminal
 
 """
@@ -104,10 +112,10 @@ def run_lexicon_emotion_mapping():
     df_7 = lexicon_to_dataframe(lexicon_7)
 
     # save paths
-    out6_json = "data/lexicon/lexicon_clean_6.json"
-    out7_json = "data/lexicon/lexicon_clean_7.json"
-    out6_csv = "data/lexicon/lexicon_clean_6.csv"
-    out7_csv = "data/lexicon/lexicon_clean_7.csv"
+    out6_json = "../data/lexicon/lexicon_clean_6.json"
+    out7_json = "../data/lexicon/lexicon_clean_7.json"
+    out6_csv = "../data/lexicon/lexicon_clean_6.csv"
+    out7_csv = "../data/lexicon/lexicon_clean_7.csv"
 
 
     print("\n🔹 Saving JSON (6-core):", out6_json)
