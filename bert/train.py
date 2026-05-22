@@ -8,19 +8,27 @@ import numpy as np
 from tqdm import tqdm
 from scipy.special import expit
 from sklearn.model_selection import StratifiedKFold, train_test_split
+from sklearn.metrics import classification_report
 from sklearn.utils import resample
 from torch.utils.data import DataLoader, Subset
 from transformers import AutoTokenizer
-# python train.py --labels 7 --debug --emotion_cv_folds 5
+import sys
+# Add project root to Python path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+# python train.py --labels 7 --debug --emotion_cv_folds 5 --epochs 10 --early_stopping --patience 2
 
 from visualize_dashboard import plot_combined_dashboard
 from dataset import TextDataset
 from model_utils import create_optimizer, create_scheduler, EarlyStopping
 from metrics import compute_all_metrics, compute_risk_metrics, threshold_sweep_metrics
-from visualize_metrics import plot_combined_risk_roc_curves, plot_confusion_matrix, plot_risk_roc_curve, plot_threshold_sweep, plot_train_history, save_classification_report, plot_risk_metrics
+from visualize_metrics import plot_combined_risk_roc_curves, plot_confusion_matrix, plot_risk_roc_curve, plot_threshold_sweep, plot_train_history, plot_train_history_single, save_classification_report, plot_risk_metrics
 from lexicon_utils import ThemeLexicon, SubthemeInferencer
 from multitask_model import BertEmotionRiskModel
 from inference import predict_chunked
+from utils.json_utils import NumpyEncoder
 
 DEFAULT_6_LABEL_PATH = "../data/processed/dataset_6labels_clean_more.csv"
 DEFAULT_7_LABEL_PATH = "../data/processed/dataset_7labels_clean.csv"
@@ -163,13 +171,22 @@ def validate_emotions_only(model, val_loader, device, args):
             trues.append(batch["emotion_labels"].cpu().numpy())
 
     avg_val_loss = val_loss / len(val_loader)
-    preds = np.concatenate(preds, axis=0)
+    preds_logits = np.concatenate(preds, axis=0)
     trues = np.concatenate(trues, axis=0)
+    preds_labels = np.argmax(preds_logits, axis=1)
 
     metrics = compute_all_metrics(
-        preds,
+        preds_logits,
         trues,
-        id2label=args._id2label
+        id2label=args._id2label,
+        output_dict=False
+    )
+    metrics["report_dict"] = classification_report(
+        trues,
+        preds_labels,
+        target_names=[args._id2label[i] for i in range(len(args._id2label))],
+        digits=4,
+        output_dict=True
     )
 
     return avg_val_loss, metrics
@@ -308,6 +325,10 @@ def run_emotion_cross_validation(df, create_dataset_fn, selected_model_name, arg
     cv_args.save_checkpoints = False
     cv_args.early_stopping = False
 
+    # Create a directory for fold-specific visualization plots
+    viz_dir = f"saved_models/trained_model_{cv_args.model_version}/metrics/cv_fold_plots"
+    os.makedirs(viz_dir, exist_ok=True)
+
     skf = StratifiedKFold(n_splits=cv_args.emotion_cv_folds, shuffle=True, random_state=42)
     
     fold_results = []
@@ -336,7 +357,7 @@ def run_emotion_cross_validation(df, create_dataset_fn, selected_model_name, arg
         optimizer = create_optimizer(model, lr=cv_args.learning_rate, weight_decay=0.05)
         scheduler = create_scheduler(optimizer, warmup_steps, total_steps)
 
-        val_metrics, _, _, _ = train_one_fold(
+        val_emotion_metrics, history, _, _ = train_one_fold(
             model,
             train_loader,
             val_loader,
@@ -347,12 +368,24 @@ def run_emotion_cross_validation(df, create_dataset_fn, selected_model_name, arg
             epoch_start=0,
             train_df=train_df,
             risk_loaders=None, # No risk loaders in emotion CV
+            fold_num=fold_idx + 1
         )
         
-        fold_results.append(val_metrics)
+        fold_results.append(val_emotion_metrics)
+
+        # Plot and save the training history for this specific fold (light and dark versions)
+        history_plot_path_light = os.path.join(viz_dir, f"train_history_fold_{fold_idx + 1}_light.png")
+        plot_train_history(history, save_to=history_plot_path_light, dark_mode=False)
+        plot_train_history_single(history, save_to=os.path.join(viz_dir, f"train_history_single_fold_{fold_idx + 1}_light.png"), dark_mode=False)
+        print(f"Saved training history for fold {fold_idx + 1} to {history_plot_path_light}")
+
+        history_plot_path_dark = os.path.join(viz_dir, f"train_history_fold_{fold_idx + 1}_dark.png")
+        plot_train_history(history, save_to=history_plot_path_dark, dark_mode=True)
+        plot_train_history_single(history, save_to=os.path.join(viz_dir, f"train_history_single_fold_{fold_idx + 1}_dark.png"), dark_mode=True)
+        print(f"Saved dark training history for fold {fold_idx + 1} to {history_plot_path_dark}")
 
         print(f"\nFold {fold_idx + 1} Validation Metrics:")
-        print(val_metrics["report"])
+        print(val_emotion_metrics["report"])
 
 
     # Summarize results
@@ -518,7 +551,7 @@ def run_risk_cross_validation(risk_data_paths, create_dataset_fn, selected_model
 # =========================
 
 def train_one_fold(model, train_loader, val_loader, optimizer, scheduler,
-                   device, args, epoch_start=0, train_df=None, risk_loaders=None):
+                   device, args, epoch_start=0, train_df=None, risk_loaders=None, fold_num=None):
 
     # Setup criterion with class weights
     if train_df is not None and args.use_emotions:
@@ -545,6 +578,12 @@ def train_one_fold(model, train_loader, val_loader, optimizer, scheduler,
     accumulation_steps = getattr(args, "accumulation_steps", 1)
 
     risk_iters = {name: iter(loaders["train"]) for name, loaders in risk_loaders.items()} if risk_loaders else None
+
+    best_val_loss = float('inf')
+    epochs_no_improve = 0
+    # Use the specific checkpoint directory, not the general model save path
+    checkpoint_dir = args.checkpoint_dir
+    os.makedirs(checkpoint_dir, exist_ok=True)
 
     for epoch in range(epoch_start, args.epochs):
         model.train()
@@ -629,6 +668,36 @@ def train_one_fold(model, train_loader, val_loader, optimizer, scheduler,
             }, ckpt_path)
             print(f"Checkpoint saved: {ckpt_path}")
 
+        # --- Checkpointing, Early Stopping, and Learning Rate Scheduling ---
+            
+        # Save checkpoint for every epoch if not doing cross-validation
+        if fold_num is None and args.emotion_cv_folds == 1:
+            epoch_model_save_path = os.path.join(checkpoint_dir, f"model_epoch_{epoch + 1}.pt")
+            torch.save(model.state_dict(), epoch_model_save_path)
+            print(f"Saved checkpoint for epoch {epoch + 1} at {epoch_model_save_path}")
+
+        if avg_val_loss < best_val_loss:
+            print(f"Validation loss improved from {best_val_loss:.4f} to {avg_val_loss:.4f}. Saving best model...")
+            best_val_loss = avg_val_loss
+            epochs_no_improve = 0
+
+            # Save the best model, naming it based on whether it's part of a CV run
+            if fold_num is not None:
+                best_model_save_path = os.path.join(checkpoint_dir, f"best_model_fold_{fold_num}.pt")
+            else:
+                best_model_save_path = os.path.join(checkpoint_dir, "best_model.pt")
+            
+            torch.save(model.state_dict(), best_model_save_path)
+            print(f"Saved best model to {best_model_save_path}")
+            
+        else:
+            epochs_no_improve += 1
+            print(f"Validation loss did not improve for {epochs_no_improve} epoch(s).")
+
+        # Learning rate scheduling step
+        if args.use_emotions:
+            scheduler.step(avg_val_loss)
+
     return metrics, history, risk_metrics, risk_outputs
 
 
@@ -683,7 +752,7 @@ def main():
     parser.add_argument("--max_length", type=int, default=128)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=5)
-    parser.add_argument("--learning_rate", type=float, default=5e-4)
+    parser.add_argument("--learning_rate", type=float, default=5e-5)
     parser.add_argument("--warmup_ratio", type=float, default=0.06)
     parser.add_argument("--val_size", type=float, default=0.15)
     parser.add_argument("--test_size", type=float, default=0.15)
@@ -750,6 +819,8 @@ def main():
     # ------------------------
     if args.checkpoint_dir is None:
         args.checkpoint_dir = f"checkpoints_{args.model_version}"
+        if args.debug:
+            args.checkpoint_dir = "checkpoints_debug"
 
     if args.data_path is None or args.lexicon_path is None:
         if args.labels == 7:
@@ -774,9 +845,9 @@ def main():
 
     # Debug mode: sample 100 random rows per each label from emotions dataset
     if args.debug:
-        df = df.groupby('label').sample(n=min(100, len(df)), random_state=42)
+        df = df.groupby('label').sample(n=min(50, len(df)), random_state=42)
         print(f"Debug mode: Using {len(df)} random samples from emotions dataset")
-        args.model_version += "_debug"
+        args.model_version = "debug"
     
     # Check label distribution
     print("Label distribution:")
@@ -964,11 +1035,11 @@ def main():
         os.makedirs(outdir, exist_ok=True)
         cv_file = os.path.join(outdir, "risk_cv_summary.json")
         with open(cv_file, "w") as f:
-            json.dump(cv_results, f, indent=4)
+            json.dump(cv_results, f, indent=4, cls=NumpyEncoder)
         print(f"Risk CV summary saved to {cv_file}")
-        return
+        # return # This was causing premature exit
     # Emotion-only CV mode
-    if args.use_emotions and not args.use_risk_flags and args.emotion_cv_folds > 1:
+    elif args.use_emotions and not args.use_risk_flags and args.emotion_cv_folds > 1:
         cv_results = run_emotion_cross_validation(
             df=df,
             create_dataset_fn=create_dataset,
@@ -981,9 +1052,9 @@ def main():
         os.makedirs(outdir, exist_ok=True)
         cv_file = os.path.join(outdir, "emotion_cv_summary.json")
         with open(cv_file, "w") as f:
-            json.dump(cv_results, f, indent=4)
+            json.dump(cv_results, f, indent=4, cls=NumpyEncoder)
         print(f"Emotion CV summary saved to {cv_file}")
-        return
+        # return # This was causing premature exit
     # ------------------------
     # Initialize model
     # ------------------------
@@ -1070,80 +1141,96 @@ def main():
 
     # Plot training history (loss)
     plot_train_history(
-        history, save_to=os.path.join(viz_dir, "train_history.png")
+        history, save_to=os.path.join(viz_dir, "train_history_light.png"), dark_mode=False
     )
+    plot_train_history(
+        history, save_to=os.path.join(viz_dir, "train_history_dark.png"), dark_mode=True
+    )
+    plot_train_history_single(
+        history, save_to=os.path.join(viz_dir, "train_history_single_light.png"), dark_mode=False)
+    plot_train_history_single(
+        history, save_to=os.path.join(viz_dir, "train_history_single_dark.png"), dark_mode=True)
     # Plot confusion matrix
     if args.use_emotions:
+        # Create a normalized version for percentages
+        cm_normalized = test_metrics["confusion_matrix"].astype('float') / test_metrics["confusion_matrix"].sum(axis=1)[:, np.newaxis]
+        
         plot_confusion_matrix(
             test_metrics["confusion_matrix"],
             label_names=list(id2label.values()),
-            save_to=os.path.join(viz_dir, "confusion_matrix.png")
+            save_to=os.path.join(viz_dir, "confusion_matrix_light.png"),
+            dark_mode=False
+        )
+        plot_confusion_matrix(
+            test_metrics["confusion_matrix"],
+            label_names=list(id2label.values()),
+            save_to=os.path.join(viz_dir, "confusion_matrix_dark.png"),
+            dark_mode=True
         )
         # Save classification report to a text file
         save_classification_report(
             test_metrics["report"], save_to=os.path.join(viz_dir, "classification_report.txt")
         )
-
     # Plot risk metrics if applicable
     if args.use_risk_flags:
         risk_viz_dir = os.path.join(viz_dir, "risk_metrics")
         plot_risk_metrics(test_risk_metrics, save_dir=risk_viz_dir)
 
-    roc_dir = os.path.join(viz_dir, "roc_curves")
-    os.makedirs(roc_dir, exist_ok=True)
+        roc_dir = os.path.join(viz_dir, "roc_curves")
+        os.makedirs(roc_dir, exist_ok=True)
 
-    # Per-risk ROC
-    for risk_name, data in test_risk_outputs.items():
-        plot_risk_roc_curve(
-            data["labels"],
-            data["probs"],
-            risk_name,
-            save_to=os.path.join(roc_dir, f"roc_{risk_name}.png")
+        # Per-risk ROC
+        for risk_name, data in test_risk_outputs.items():
+            plot_risk_roc_curve(
+                data["labels"],
+                data["probs"],
+                risk_name,
+                save_to=os.path.join(roc_dir, f"roc_{risk_name}.png")
+            )
+
+        # Combined ROC
+        if args.debug:
+            print("Debug mode: skipping ROC and threshold sweep plots")
+        else:
+            plot_combined_risk_roc_curves(
+                test_risk_outputs,
+                save_to=os.path.join(roc_dir, "roc_all_risks.png")
+            )
+
+        # ------------------------
+        # Threshold sweep plots
+        # ------------------------
+        threshold_dir = os.path.join(viz_dir, "threshold_sweeps")
+        os.makedirs(threshold_dir, exist_ok=True)
+
+        optimal_thresholds = {}
+
+        for risk_name, data in test_risk_outputs.items():
+            metrics_sweep = threshold_sweep_metrics(
+                labels=data["labels"],
+                probs=data["probs"]
+            )
+            opt_thr = plot_threshold_sweep(
+                metrics_sweep,
+                risk_name,
+                save_to=os.path.join(threshold_dir, f"{risk_name}_threshold_sweep.png")
+            )
+            optimal_thresholds[risk_name] = float(opt_thr)
+
+        # Save optimal thresholds
+        threshold_file = os.path.join(threshold_dir, "optimal_thresholds.json")
+        with open(threshold_file, "w") as f:
+            json.dump(optimal_thresholds, f, indent=4)
+
+        print(f"Optimal thresholds saved to {threshold_file}")
+
+        # Combined dashboard figure
+        plot_combined_dashboard( 
+            history,
+            risk_metrics_history=history["risk_metrics"],
+            optimal_thresholds_history=history["risk_threshold_sweeps"],
+            save_to=os.path.join(viz_dir, "combined_dashboard.png")
         )
-
-    # Combined ROC
-    if args.debug:
-        print("Debug mode: skipping ROC and threshold sweep plots")
-    else:
-        plot_combined_risk_roc_curves(
-            test_risk_outputs,
-            save_to=os.path.join(roc_dir, "roc_all_risks.png")
-        )
-
-    # ------------------------
-    # Threshold sweep plots
-    # ------------------------
-    threshold_dir = os.path.join(viz_dir, "threshold_sweeps")
-    os.makedirs(threshold_dir, exist_ok=True)
-
-    optimal_thresholds = {}
-
-    for risk_name, data in test_risk_outputs.items():
-        metrics_sweep = threshold_sweep_metrics(
-            labels=data["labels"],
-            probs=data["probs"]
-        )
-        opt_thr = plot_threshold_sweep(
-            metrics_sweep,
-            risk_name,
-            save_to=os.path.join(threshold_dir, f"{risk_name}_threshold_sweep.png")
-        )
-        optimal_thresholds[risk_name] = float(opt_thr)
-
-    # Save optimal thresholds
-    threshold_file = os.path.join(threshold_dir, "optimal_thresholds.json")
-    with open(threshold_file, "w") as f:
-        json.dump(optimal_thresholds, f, indent=4)
-
-    print(f"Optimal thresholds saved to {threshold_file}")
-
-    # Combined dashboard figure
-    plot_combined_dashboard( 
-        history,
-        risk_metrics_history=history["risk_metrics"],
-        optimal_thresholds_history=history["risk_threshold_sweeps"],
-        save_to=os.path.join(viz_dir, "combined_dashboard.png")
-    )
     # ------------------------
     # Save final model
     # ------------------------

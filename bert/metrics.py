@@ -8,37 +8,50 @@ from sklearn.metrics import (
     roc_auc_score,
     precision_score,
     recall_score,
+    roc_curve,
+    precision_recall_curve,
+    auc,
 )
 import numpy as np
 
-def compute_all_metrics(preds, labels, id2label=None):
+def compute_all_metrics(preds_logits, trues, id2label, output_dict=False):
     """
-    Computes accuracy, f1, confusion matrix, classification report, etc.
-    id2label: dict mapping class indices to label names (optional)
+    Computes classification report, confusion matrix, and macro scores.
     """
-    preds = np.argmax(preds, axis=1)
-
-    acc = accuracy_score(labels, preds)
-
-    precision, recall, f1, _ = precision_recall_fscore_support(
-        labels, preds, average="macro"
-    )
-
-    # Use target_names if id2label is provided
-    target_names = None
-    if id2label is not None:
-        target_names = [id2label[i] for i in range(len(id2label))]
+    preds_labels = np.argmax(preds_logits, axis=1)
     
-    cls_report = classification_report(labels, preds, target_names=target_names, digits=4)
-    cm = confusion_matrix(labels, preds)
+    # Ensure target_names are strings
+    target_names = [str(id2label[i]) for i in range(len(id2label))]
+
+    report_str = classification_report(
+        trues,
+        preds_labels,
+        target_names=target_names,
+        digits=4,
+        output_dict=False
+    )
+    report_dict = classification_report(
+        trues,
+        preds_labels,
+        target_names=target_names,
+        digits=4,
+        output_dict=True
+    )
+    
+    cm = confusion_matrix(trues, preds_labels)
+
+    # Calculate macro scores separately to ensure they are always available
+    f1_macro = f1_score(trues, preds_labels, average='macro', zero_division=0)
+    precision_macro = precision_score(trues, preds_labels, average='macro', zero_division=0)
+    recall_macro = recall_score(trues, preds_labels, average='macro', zero_division=0)
 
     return {
-        "accuracy": acc,
-        "precision": precision,
-        "recall": recall,
-        "f1": f1,
-        "report": cls_report,
+        "report": report_str,
+        "report_dict": report_dict,
         "confusion_matrix": cm,
+        "f1_score_macro": f1_macro,
+        "precision_macro": precision_macro,
+        "recall_macro": recall_macro,
     }
 
 

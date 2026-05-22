@@ -3,49 +3,91 @@ import os
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 from sklearn.metrics import roc_curve, auc
 
 
-def plot_confusion_matrix(cm, labels=None, label_names=None, save_to=None, normalize=True):
-    if label_names is None:
-        label_names = labels  # fallback to integer labels
+def plot_train_history(history, save_to=None, dark_mode=False):
+    """
+    Plot training and validation loss, and optionally emotion metrics over epochs.
+    """
+    if not history or not history.get("train_loss"):
+        print("History is empty or contains no training loss. Skipping plot.")
+        return
 
-    # Row-normalize to percentages so each true class sums to 100%.
-    # This makes class-wise errors comparable under class imbalance.
-    if normalize:
-        row_sums = cm.sum(axis=1, keepdims=True)
-        cm_plot = np.divide(cm, row_sums, out=np.zeros_like(cm, dtype=float), where=row_sums != 0)
-        annot = np.array([[f"{v * 100:.1f}%" for v in row] for row in cm_plot])
-        fmt = ""
-        vmin, vmax = 0, 1
-    else:
-        cm_plot = cm
-        annot = True
-        fmt = "d"
-        vmin, vmax = None, None
+    bg_color = '#333333' if dark_mode else 'white'
+    text_color = 'white' if dark_mode else 'black'
 
-    plt.figure(figsize=(8, 6))
-    sns.heatmap(
-        cm_plot,
-        annot=annot,
-        fmt=fmt,
-        cmap="Blues",
-        vmin=vmin,
-        vmax=vmax,
-        xticklabels=label_names,
-        yticklabels=label_names,
-    )
-    plt.ylabel("True")
-    plt.xlabel("Predicted")
-    plt.title("Confusion Matrix (%)" if normalize else "Confusion Matrix")
+    pink_color = "#FEB2B4" if dark_mode else "#FF7F7F"
+    yellow_color = "#FCD639" if dark_mode else "#F5D000"
+    
+    # Determine the number of subplots needed
+    has_emotion_metrics = any(m is not None for m in history.get("emotion_metrics", []))
+    num_subplots = 2 if has_emotion_metrics else 1
+    
+    fig, axes = plt.subplots(num_subplots, 1, figsize=(12, 6 * num_subplots), facecolor=bg_color)
+    if num_subplots == 1:
+        axes = [axes] # Make it iterable
 
+    # --- Plot 1: Loss ---
+    ax1 = axes[0]
+    epochs = range(1, len(history["train_loss"]) + 1)
+    ax1.plot(epochs, history["train_loss"], "o-", color=pink_color, label="Training Loss")
+    if history.get("val_loss") and not all(np.isnan(history["val_loss"])):
+        ax1.plot(epochs, history["val_loss"], "o-", color=yellow_color, label="Validation Loss")
+    
+    ax1.set_title("Training and Validation Loss", color=text_color)
+    ax1.set_xlabel("Epochs", color=text_color)
+    ax1.set_ylabel("Loss", color=text_color)
+    ax1.legend()
+    ax1.grid(True, which='both', linestyle='--', linewidth=0.5)
+    ax1.set_facecolor(bg_color)
+    ax1.tick_params(axis='x', colors=text_color)
+    ax1.tick_params(axis='y', colors=text_color)
+    for spine in ax1.spines.values():
+        spine.set_edgecolor(text_color)
+
+    # --- Plot 2: Emotion Metrics (if available) ---
+
+    mercury_color = "#BEC7B9" if dark_mode else "#819774"
+    orange_color = "#F29668" if dark_mode else "#D16D3B"
+    butteryellow_color = "#FFE497" if dark_mode else "#FFD769"
+
+    if has_emotion_metrics:
+        ax2 = axes[1]
+        emotion_metrics = history.get("emotion_metrics", [])
+        
+        f1_scores = [m["f1_score_macro"] for m in emotion_metrics if m]
+        precision_scores = [m["precision_macro"] for m in emotion_metrics if m]
+        recall_scores = [m["recall_macro"] for m in emotion_metrics if m]
+
+        if f1_scores:
+            ax2.plot(epochs, f1_scores, "go-", color=mercury_color, label="Macro F1-Score")
+        if precision_scores:
+            ax2.plot(epochs, precision_scores, "yo-", color=orange_color, label="Macro Precision")
+        if recall_scores:
+            ax2.plot(epochs, recall_scores, "mo-", color=butteryellow_color, label="Macro Recall")
+
+        ax2.set_title("Validation Emotion Metrics", color=text_color)
+        ax2.set_xlabel("Epochs", color=text_color)
+        ax2.set_ylabel("Score", color=text_color)
+        ax2.legend()
+        ax2.grid(True, which='both', linestyle='--', linewidth=0.5)
+        ax2.set_facecolor(bg_color)
+        ax2.tick_params(axis='x', colors=text_color)
+        ax2.tick_params(axis='y', colors=text_color)
+        for spine in ax2.spines.values():
+            spine.set_edgecolor(text_color)
+
+    plt.tight_layout()
     if save_to:
-        os.makedirs(os.path.dirname(save_to), exist_ok=True)
-        plt.savefig(save_to, bbox_inches="tight")
+        plt.savefig(save_to, facecolor=bg_color)
+        print(f"Saved training history plot to {save_to}")
+    else:
+        plt.show()
     plt.close()
 
-
-def plot_train_history(history, save_to=None):
+def plot_train_history_single(history, save_to=None, dark_mode=False):
     """
     history = {
         "train_loss": [...],
@@ -54,25 +96,95 @@ def plot_train_history(history, save_to=None):
         "val_accuracy": [...]
     }
     """
-    plt.figure(figsize=(8, 6))
+    bg_color = '#333333' if dark_mode else 'white'
+    text_color = 'white' if dark_mode else 'black'
 
-    plt.plot(history["train_loss"], label="Train Loss")
-    plt.plot(history["val_loss"], label="Validation Loss")
+    pink_color = "#FEB2B4" if dark_mode else "#FF7F7F"
+    yellow_color = "#FCD639" if dark_mode else "#F5D000"
 
+    fig, ax = plt.subplots(figsize=(8, 6), facecolor=bg_color)
+
+    ax.plot(history["train_loss"], label="Train Loss", color=pink_color)
+    ax.plot(history["val_loss"], label="Validation Loss", color=yellow_color)
+    
+    # Update colors for val metrics based on dark mode 
     if "val_f1" in history:
-        plt.plot(history["val_f1"], label="Val F1", linestyle="--")
+        ax.plot(history["val_f1"], label="Val F1", linestyle="--")
 
     if "val_accuracy" in history:
-        plt.plot(history["val_accuracy"], label="Val Accuracy", linestyle="--")
+        ax.plot(history["val_accuracy"], label="Val Accuracy", linestyle="--")
 
-    plt.xlabel("Epoch")
-    plt.ylabel("Value")
-    plt.title("Training History")
-    plt.legend()
+    ax.set_title("Training History", color=text_color)
+    ax.set_xlabel("Epoch", color=text_color)
+    ax.set_ylabel("Value", color=text_color)
+    ax.legend()
+    ax.grid(True, which='both', linestyle='--', linewidth=0.5)
+    ax.set_facecolor(bg_color)
+    ax.tick_params(axis='x', colors=text_color)
+    ax.tick_params(axis='y', colors=text_color)
+    for spine in ax.spines.values():
+        spine.set_edgecolor(text_color)
+
+    plt.tight_layout()
+    if save_to:
+        plt.savefig(save_to, facecolor=bg_color)
+        print(f"Saved single training history plot to {save_to}")
+    else:
+        plt.show()
+    plt.close()
+
+
+def save_classification_report(report: str, save_to: str):
+    os.makedirs(os.path.dirname(save_to), exist_ok=True)
+    with open(save_to, "w", encoding="utf-8") as f:
+        f.write(report)
+
+def plot_confusion_matrix(cm, label_names, save_to=None, dark_mode=False):
+    """
+    Plot a confusion matrix using seaborn's heatmap, normalized to show percentages.
+    """
+    bg_color = '#333333' if dark_mode else 'white'
+    text_color = 'white' if dark_mode else 'black'
+
+    pink_color = "#FEB2B4" if dark_mode else "#FF7F7F"
+    # Normalize the confusion matrix to show percentages
+    cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    # Custom colormap from background to pink_color
+    cmap = LinearSegmentedColormap.from_list("custom_cmap", [bg_color, pink_color])
+
+    plt.figure(figsize=(8, 6), facecolor=bg_color)
+    sns.heatmap(
+        cm_normalized,
+        annot=True,
+        fmt=".1%",  # Format as percentage with one decimal place
+        cmap=cmap,
+        xticklabels=label_names,
+        yticklabels=label_names,
+        #cbar_kws={'label': 'Percentage of Predictions'}
+    )
+    plt.title("Confusion Matrix (%)", color=text_color)
+    plt.ylabel("True Label", color=text_color)
+    plt.xlabel("Predicted Label", color=text_color)
+    plt.xticks(rotation=45, ha="center", color=text_color)
+    plt.yticks(rotation=0, color=text_color)
+    
+    ax = plt.gca()
+    ax.set_facecolor(bg_color)
+    for spine in ax.spines.values():
+        spine.set_edgecolor(text_color)
+    
+    cbar = ax.collections[0].colorbar
+    cbar.ax.yaxis.label.set_color(text_color)
+    cbar.ax.tick_params(colors=text_color)
+
+    plt.tight_layout()
 
     if save_to:
-        os.makedirs(os.path.dirname(save_to), exist_ok=True)
-        plt.savefig(save_to, bbox_inches="tight")
+        plt.savefig(save_to, facecolor=bg_color)
+        print(f"Saved confusion matrix to {save_to}")
+    else:
+        plt.show()
     plt.close()
 
 
@@ -125,7 +237,7 @@ def plot_risk_roc_curve(labels, probs, risk_name, save_to=None):
 
     plt.xlabel("False Positive Rate")
     plt.ylabel("True Positive Rate")
-    plt.title(f"ROC Curve – {risk_name}")
+    plt.title(f"ROC Curve - {risk_name}")
     plt.legend(loc="lower right")
 
     if save_to:
