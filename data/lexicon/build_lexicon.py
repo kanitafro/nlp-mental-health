@@ -19,7 +19,7 @@ from utils.file_io import save_dict_as_csv, save_dict_as_json
 # Pipeline
 # -------------------------------------------------------------------
 
-def build_and_save_lexicon(output_dir="data/lexicon"):
+def build_and_save_lexicon(output_dir="../data/lexicon"):
     """
     Full pipeline:
     1. Load raw lexicon
