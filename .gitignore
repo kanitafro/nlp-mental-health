@@ -21,6 +21,7 @@ data/raw/inference_test.txt
 
 # Data uploads
 *.csv
+*.zip
 data/raw/*.csv
 data/processed/*.csv
 data/raw/*.ini
