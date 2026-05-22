@@ -17,10 +17,11 @@ from tqdm import tqdm
 import argparse
 import numpy as np
 
+
 # ============================================
 # CONFIGURATION
 # ============================================
-BATCH_SIZE = 128  # Your L40S can handle this
+BATCH_SIZE = 128  # L40S can handle this
 INTERMEDIATE_LANGUAGES = ['fr', 'de', 'es']  # Default languages
 NUM_WORKERS = 4
 
@@ -221,8 +222,8 @@ class LightweightBackTranslator:
 
 def disgust_backtranslate():
     parser = argparse.ArgumentParser(description='Fast Back-Translation for Server')
-    parser.add_argument('--input', type=str, default='disgust_bonus.csv')
-    parser.add_argument('--output', type=str, default='disgust_backtranslated.csv')
+    parser.add_argument('--input', type=str, default='../data/raw/disgust_original.csv')
+    parser.add_argument('--output', type=str, default='../data/raw/disgust_backtranslated.csv')
     parser.add_argument('--model_type', type=str, choices=['m2m100', 'lightweight'], default='lightweight')
     parser.add_argument('--languages', nargs='+', default=['fr', 'de', 'es'], 
                        help='Intermediate languages (e.g., fr de es ru zh)')
@@ -235,7 +236,7 @@ def disgust_backtranslate():
     
     # Setup
     device, num_gpus = setup_gpu()
-    
+
     # Load data
     print(f"\n📂 Loading {args.input}...")
     df = pd.read_csv(args.input)

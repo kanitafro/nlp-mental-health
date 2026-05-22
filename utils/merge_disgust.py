@@ -15,8 +15,9 @@ import numpy as np
 
 path_paraphrased = "../data/raw/disgust_paraphrased.csv"
 path_backtranslated = "../data/raw/disgust_backtranslated.csv"
+path_merged = "../data/raw/disgust_all.csv"
 
-def augment_disgust():
+def merge_disgust():
     df1 = pd.read_csv(path_paraphrased)
     df2 = pd.read_csv(path_backtranslated)
 
@@ -36,9 +37,9 @@ def augment_disgust():
     print("Total number of samples after merging:", df_merged.shape[0])
     print("Value counts for merged dataset:\n", df_merged['method'].value_counts())
 
-    df_merged.to_csv("../data/raw/disgust_all.csv", index=False)
+    df_merged.to_csv(path_merged, index=False)
     print("Merged dataset saved to ../data/raw/disgust_all.csv")
     return df_merged
 
 if __name__ == "__main__":
-    augment_disgust()
+    merge_disgust()

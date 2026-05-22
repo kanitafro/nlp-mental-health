@@ -27,12 +27,13 @@ REPO_ROOT = SCRIPT_DIR.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from utils.augment_disgust import augment_disgust
+from utils.merge_disgust import merge_disgust
 
 dir_raw = REPO_ROOT / "data" / "raw"
 path_raw_6labels = dir_raw / "dataset_6labels.csv"
 path_raw_love_surprise = dir_raw / "love_surprise_bonus.csv"
 path_raw_disgust = dir_raw / "disgust_all.csv"
+
 
 
 def normalize_text_label_columns(df):
@@ -84,11 +85,11 @@ def merge_to_7labels():
     print("Loading dataset (love & surprise)...")
     df_love_surprise = normalize_text_label_columns(pd.read_csv(path_raw_love_surprise))
 
-    # If path to disgust not found then run the augment_disgust() to create the merged disgust dataset
+    # If path to disgust not found then run the merge_disgust() to create the merged disgust dataset
 
     if not path_raw_disgust.exists():
-        print(f"Path to disgust dataset not found at {path_raw_disgust}.\nRunning augment_disgust() to create the merged disgust dataset...\n")
-        df_disgust = augment_disgust()
+        print(f"Path to disgust dataset not found at {path_raw_disgust}.\nRunning merge_disgust() to create the merged disgust dataset...\n")
+        df_disgust = merge_disgust()
     else:
         print("Loading dataset (disgust)...")
         df_disgust = normalize_text_label_columns(pd.read_csv(path_raw_disgust))
