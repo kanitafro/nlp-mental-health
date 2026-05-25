@@ -139,31 +139,47 @@ def save_classification_report(report: str, save_to: str):
     with open(save_to, "w", encoding="utf-8") as f:
         f.write(report)
 
-def plot_confusion_matrix(cm, label_names, save_to=None, dark_mode=False):
+def plot_confusion_matrix(cm, label_names, save_to=None, dark_mode=False, label_counts="absolute"):
     """
-    Plot a confusion matrix using seaborn's heatmap, normalized to show percentages.
+    Plot a confusion matrix using seaborn's heatmap.
+    - Color gradient ALWAYS represents percentages (row-normalized)
+    - Text shows either absolute counts or percentages based on label_counts
     """
     bg_color = '#333333' if dark_mode else 'white'
     text_color = 'white' if dark_mode else 'black'
-
     pink_color = "#FEB2B4" if dark_mode else "#FF7F7F"
-    # Normalize the confusion matrix to show percentages
+
+    # Normalize for color coding (ALWAYS used for the heatmap values)
     cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
 
-    # Custom colormap from background to pink_color
+    # Create custom annotations based on label_counts
+    annotations = np.empty_like(cm, dtype='object')
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
+            if label_counts == "relative":
+                annotations[i, j] = f"{cm_normalized[i, j]:.1%}"
+            else:
+                annotations[i, j] = str(int(cm[i, j]))
+
+    # Set title and colorbar label
+    if label_counts == "relative":
+        title = "Confusion Matrix (%)"
+    else:
+        title = "Confusion Matrix"
+    cbar_label = 'Percentage of Predictions (%)'
+
     cmap = LinearSegmentedColormap.from_list("custom_cmap", [bg_color, pink_color])
 
     plt.figure(figsize=(8, 6), facecolor=bg_color)
     sns.heatmap(
-        cm_normalized,
-        annot=True,
-        fmt=".1%",  # Format as percentage with one decimal place
+        cm_normalized,  # ALWAYS normalized for color!
+        annot=annotations,  # Custom text annotations
+        fmt='',  # Empty because we provide formatted annotations
         cmap=cmap,
         xticklabels=label_names,
         yticklabels=label_names,
-        #cbar_kws={'label': 'Percentage of Predictions'}
     )
-    plt.title("Confusion Matrix (%)", color=text_color)
+    plt.title(title, color=text_color)
     plt.ylabel("True Label", color=text_color)
     plt.xlabel("Predicted Label", color=text_color)
     plt.xticks(rotation=45, ha="center", color=text_color)
@@ -177,16 +193,16 @@ def plot_confusion_matrix(cm, label_names, save_to=None, dark_mode=False):
     cbar = ax.collections[0].colorbar
     cbar.ax.yaxis.label.set_color(text_color)
     cbar.ax.tick_params(colors=text_color)
+    cbar.set_label(cbar_label, color=bg_color)
 
     plt.tight_layout()
 
     if save_to:
-        plt.savefig(save_to, facecolor=bg_color)
+        plt.savefig(save_to, facecolor=bg_color, dpi=300)
         print(f"Saved confusion matrix to {save_to}")
     else:
         plt.show()
     plt.close()
-
 
 def save_classification_report(report: str, save_to: str):
     os.makedirs(os.path.dirname(save_to), exist_ok=True)

@@ -5,6 +5,9 @@ from transformers import AutoModel, AutoConfig, BertPreTrainedModel
 
 
 class BertEmotionRiskModel(BertPreTrainedModel):
+    _tied_weights_keys = []
+    _keys_to_ignore_on_load_unexpected = [r"pooler", r"vocab_transform", r"vocab_layer_norm", r"vocab_projector"]
+
     """
     BERT-based multi-task model for:
       - Emotion classification (single-label, softmax)
@@ -17,16 +20,13 @@ class BertEmotionRiskModel(BertPreTrainedModel):
       - risk_loss     (optional, if use_risk=True and risk_labels provided)
     """
 
-    def __init__(self, model_name, num_labels=6, use_risk=False, dropout_rate=0.1):
-        config = AutoConfig.from_pretrained(model_name)
-        config.num_labels = num_labels
+    def __init__(self, config, base_model, num_labels=6, use_risk=False, dropout_rate=0.1):
         super().__init__(config)
-
         self.num_labels = num_labels
         self.use_risk = use_risk
 
         # Encoder
-        self.bert = AutoModel.from_pretrained(model_name, config=config)
+        self.bert = base_model
         hidden_size = self.bert.config.hidden_size
 
         # Emotion head (mutually exclusive)
@@ -46,7 +46,7 @@ class BertEmotionRiskModel(BertPreTrainedModel):
             self.risk_classifier = nn.Linear(hidden_size, self.num_risks)
 
         self.dropout = nn.Dropout(dropout_rate) # defined in argparse in train.py
-        self.init_weights()
+        # self.init_weights() # No longer call this here, BertPreTrainedModel handles it
 
     def forward(
         self,
@@ -105,5 +105,5 @@ class BertEmotionRiskModel(BertPreTrainedModel):
         #return type("ModelOutput", (object,), output)()
         ModelOutput = namedtuple("ModelOutput", ["logits", "loss", "risk_logits", "risk_loss"])
         return ModelOutput(logits, emotion_loss, risk_logits, risk_loss)
-    
-    
+
+

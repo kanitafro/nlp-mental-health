@@ -11,13 +11,16 @@ from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.metrics import classification_report
 from sklearn.utils import resample
 from torch.utils.data import DataLoader, Subset
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, AutoConfig, AutoModel
 import sys
 # Add project root to Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
+# when running on server:
+# pip install torch pandas numpy tqdm scipy scikit-learn transformers matplotlib seaborn
+# debug run (50 samples per label):
 # python train.py --labels 7 --debug --emotion_cv_folds 5 --epochs 10 --early_stopping --patience 2
 
 from visualize_dashboard import plot_combined_dashboard
@@ -324,6 +327,7 @@ def run_emotion_cross_validation(df, create_dataset_fn, selected_model_name, arg
     cv_args = argparse.Namespace(**vars(args))
     cv_args.save_checkpoints = False
     cv_args.early_stopping = False
+    cv_args.use_risk = args.use_risk_flags  # Correctly copy the flag
 
     # Create a directory for fold-specific visualization plots
     viz_dir = f"saved_models/trained_model_{cv_args.model_version}/metrics/cv_fold_plots"
@@ -345,12 +349,24 @@ def run_emotion_cross_validation(df, create_dataset_fn, selected_model_name, arg
         train_loader = DataLoader(train_ds, batch_size=cv_args.batch_size, shuffle=True)
         val_loader = DataLoader(val_ds, batch_size=cv_args.batch_size, shuffle=False)
 
+        # Pre-load the model and config to pass into the custom model
+        config = AutoConfig.from_pretrained(
+            args.model_name,
+            num_labels=args.labels,
+            # trust_remote_code=True  # Add if using a model that requires it
+        )
+
+        # Create a new model instance for each fold to ensure fresh weights
+        # We load the base model inside the loop to ensure it's fresh for each fold
+        base_model = AutoModel.from_pretrained(args.model_name, config=config)
         model = BertEmotionRiskModel(
-            selected_model_name,
-            num_labels=len(args._label2id),
-            use_risk=False,  # Emotion CV is emotion-only
-            dropout_rate=args.dropout_rate,
-        ).to(device)
+            config=config,
+            base_model=base_model,
+            num_labels=args.labels,
+            use_risk=cv_args.use_risk, # Use the copied flag
+            dropout_rate=args.dropout_rate
+        )
+        model.to(device)
 
         total_steps = len(train_loader) * cv_args.epochs
         warmup_steps = int(cv_args.warmup_ratio * total_steps)
@@ -555,15 +571,25 @@ def train_one_fold(model, train_loader, val_loader, optimizer, scheduler,
 
     # Setup criterion with class weights
     if train_df is not None and args.use_emotions:
-        label_counts = train_df["label"].value_counts().sort_index()
-        total_samples = len(train_df)
+        # CRITICAL: Use ONLY original samples for class weights
+        # Augmented samples should not affect class weighting
+        if 'is_augmented' in train_df.columns:
+            original_train = train_df[train_df['is_augmented'] == False]
+            print(f"\nClass weight calculation: Using {len(original_train)} original samples (ignoring {len(train_df) - len(original_train)} augmented samples)")
+        else:
+            original_train = train_df
+            print(f"\nWarning: 'is_augmented' column not found. Using all {len(train_df)} samples for class weights.")
+        
+        label_counts = original_train["label"].value_counts().sort_index()
+        total_samples = len(original_train)
         class_weights = total_samples / (len(label_counts) * label_counts.values)
         class_weights = torch.tensor(class_weights, dtype=torch.float).to(device)
         criterion = torch.nn.CrossEntropyLoss(weight=class_weights, label_smoothing=0.2)
 
-        print("\nClass weights:")
+        print("\nClass weights (based on ORIGINAL samples only):")
         for i, (label_name, weight) in enumerate(zip(args._id2label.values(), class_weights)):
-            print(f"  {label_name}: {weight:.2f}")
+            original_count = label_counts.iloc[i] if i < len(label_counts) else 0
+            print(f"  {label_name}: {weight:.2f} (original count: {original_count})")
     elif args.use_emotions:
         criterion = torch.nn.CrossEntropyLoss()
     else:
@@ -579,8 +605,6 @@ def train_one_fold(model, train_loader, val_loader, optimizer, scheduler,
 
     risk_iters = {name: iter(loaders["train"]) for name, loaders in risk_loaders.items()} if risk_loaders else None
 
-    best_val_loss = float('inf')
-    epochs_no_improve = 0
     # Use the specific checkpoint directory, not the general model save path
     checkpoint_dir = args.checkpoint_dir
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -649,13 +673,31 @@ def train_one_fold(model, train_loader, val_loader, optimizer, scheduler,
                 f"status={status}"
             )
 
-        # Early stopping
+        # --- Checkpointing, Early Stopping, and Learning Rate Scheduling ---
         if use_early_stopping and early_stopper is not None:
+            # The early_stopper.step() method now implicitly handles checking if the score has improved
+            # and returns True if it has.
             if early_stopper.step(avg_val_loss):
+                print(f"Validation loss improved from {early_stopper.val_loss_min:.4f} to {avg_val_loss:.4f}. Saving best model...")
+                # Save the best model, naming it based on whether it's part of a CV run
+                if fold_num is not None:
+                    best_model_save_path = os.path.join(checkpoint_dir, f"best_model_fold_{fold_num}.pt")
+                else:
+                    best_model_save_path = os.path.join(checkpoint_dir, "best_model.pt")
+                
+                torch.save(model.state_dict(), best_model_save_path)
+                print(f"Saved best model to {best_model_save_path}")
+            else:
+                # We use the counter from the early_stopper to show how many epochs have passed without improvement
+                print(f"Validation loss did not improve for {early_stopper.counter} epoch(s).")
+
+            # Check if the early stopping condition is met
+            if early_stopper.early_stop:
                 print("Early stopping triggered.")
                 break
         
         # ----- Save checkpoint (optional) -----
+        # This part handles saving a checkpoint for every single epoch, regardless of performance
         if args.save_checkpoints:
             os.makedirs(args.checkpoint_dir, exist_ok=True)
             ckpt_path = os.path.join(args.checkpoint_dir, f"{args.model_version}_epoch_{epoch+1}.pt")
@@ -667,7 +709,7 @@ def train_one_fold(model, train_loader, val_loader, optimizer, scheduler,
                 "history": history
             }, ckpt_path)
             print(f"Checkpoint saved: {ckpt_path}")
-
+        """
         # --- Checkpointing, Early Stopping, and Learning Rate Scheduling ---
             
         # Save checkpoint for every epoch if not doing cross-validation
@@ -692,7 +734,7 @@ def train_one_fold(model, train_loader, val_loader, optimizer, scheduler,
             
         else:
             epochs_no_improve += 1
-            print(f"Validation loss did not improve for {epochs_no_improve} epoch(s).")
+            print(f"Validation loss did not improve for {epochs_no_improve} epoch(s).")"""
 
         # Learning rate scheduling step
         if args.use_emotions:
@@ -839,6 +881,7 @@ def main():
     # Load dataframe
     # ------------------------
     df = pd.read_csv(args.data_path)
+    # Debug: Check method column
 
     # rename label 'suprise' to 'surprise' (if still present typo — triple checked)
     df['label'] = df['label'].replace('suprise', 'surprise')
@@ -869,12 +912,6 @@ def main():
     else:
         risk_data_paths = None
 
-    # ------------------------
-    # Build label mappings
-    # ------------------------
-    label2id, id2label, df = build_label_mappings(df, args.labels)
-    args._label2id = label2id
-    args._id2label = id2label
 
     # ------------------------
     # Initialize tokenizer
@@ -899,23 +936,91 @@ def main():
         print(f"GPU Memory cached: {torch.cuda.memory_reserved() / 1e9:.2f} GB")
 
     # ------------------------
+    # Build label mappings
+    # ------------------------
+    # Save original labels BEFORE mapping
+    df['original_label'] = df['label']
+
+    label2id, id2label, df = build_label_mappings(df, args.labels)
+    args._label2id = label2id
+    args._id2label = id2label
+
+    # Create is_augmented column from method
+    if 'method' in df.columns:
+        df['is_augmented'] = (df['method'] != 'original')
+        print(f"\n=== AUGMENTATION TRACKING ===")
+        print(f"Total original samples: {len(df[df['is_augmented'] == False])}")
+        print(f"Total augmented samples: {len(df[df['is_augmented'] == True])}")
+
+    # ------------------------
     # Split dataset (train / val / test)
     # ------------------------
+    # Separate disgust from non-disgust using ORIGINAL LABEL
+    disgust_df = df[df['original_label'] == 'disgust'].copy()
+    non_disgust_df = df[df['original_label'] != 'disgust'].copy()
+
+    print(f"\n=== SPLIT DEBUG ===")
+    print(f"Disgust samples: {len(disgust_df)}")
+    print(f"Non-disgust samples: {len(non_disgust_df)}")
+
+    # ============ 1. SPLIT NON-DISGUST ============
     holdout_size = args.val_size + args.test_size
-    train_df, holdout_df = train_test_split(
-        df, test_size=holdout_size, stratify=df["label"], random_state=42
+
+    train_non_disgust, holdout_non_disgust = train_test_split(
+        non_disgust_df, 
+        test_size=holdout_size, 
+        stratify=non_disgust_df["label"],  # Use the numeric label for stratification
+        random_state=42
     )
+
     test_frac_in_holdout = args.test_size / holdout_size
-    val_df, test_df = train_test_split(
-        holdout_df, test_size=test_frac_in_holdout, stratify=holdout_df["label"], random_state=42
+    val_non_disgust, test_non_disgust = train_test_split(
+        holdout_non_disgust, 
+        test_size=test_frac_in_holdout, 
+        stratify=holdout_non_disgust["label"],
+        random_state=42
     )
 
-    print(
-        f"Data split | train={len(train_df)} ({len(train_df)/len(df):.1%}) | "
+    # ============ 2. SPLIT DISGUST (by original_id groups) ============
+    if not disgust_df.empty:
+        unique_original_ids = disgust_df['original_id'].unique()
+        print(f"Unique disgust original_ids: {len(unique_original_ids)}")
+        
+        train_original_ids, holdout_original_ids = train_test_split(
+            unique_original_ids,
+            test_size=holdout_size,
+            random_state=42
+        )
+        
+        val_original_ids, test_original_ids = train_test_split(
+            holdout_original_ids,
+            test_size=test_frac_in_holdout,
+            random_state=42
+        )
+        
+        train_disgust = disgust_df[disgust_df['original_id'].isin(train_original_ids)]
+        val_disgust = disgust_df[disgust_df['original_id'].isin(val_original_ids)]
+        test_disgust = disgust_df[disgust_df['original_id'].isin(test_original_ids)]
+    else:
+        train_disgust = pd.DataFrame()
+        val_disgust = pd.DataFrame()
+        test_disgust = pd.DataFrame()
+
+    # ============ 3. MERGE ============
+    train_df = pd.concat([train_non_disgust, train_disgust], ignore_index=True)
+    val_df = pd.concat([val_non_disgust, val_disgust], ignore_index=True)
+    test_df = pd.concat([test_non_disgust, test_disgust], ignore_index=True)
+
+    # Debug output
+    print(f"\nData split | train={len(train_df)} ({len(train_df)/len(df):.1%}) | "
         f"val={len(val_df)} ({len(val_df)/len(df):.1%}) | "
-        f"test={len(test_df)} ({len(test_df)/len(df):.1%})"
-    )
+        f"test={len(test_df)} ({len(test_df)/len(df):.1%})")
 
+    print("\n=== ORIGINAL DISGUST DISTRIBUTION ===")
+    print(f"Total original disgust in dataset: {len(df[(df['original_label']=='disgust') & (df['is_augmented']==False)])}")
+    print(f"Original disgust in train: {len(train_df[(train_df['original_label']=='disgust') & (train_df['is_augmented']==False)])}")
+    print(f"Original disgust in val: {len(val_df[(val_df['original_label']=='disgust') & (val_df['is_augmented']==False)])}")
+    print(f"Original disgust in test: {len(test_df[(test_df['original_label']=='disgust') & (test_df['is_augmented']==False)])}")
     # ------------------------
     # Create Datasets and DataLoaders
     # ------------------------
@@ -1056,14 +1161,18 @@ def main():
         print(f"Emotion CV summary saved to {cv_file}")
         # return # This was causing premature exit
     # ------------------------
-    # Initialize model
+    # Initialize model for the final training run
     # ------------------------
-    for batch in train_loader:
-        print(batch["input_ids"].shape)  # should be [batch_size, 128]
-        break
+    print("Initializing final model for training...")
+    config = AutoConfig.from_pretrained(
+        selected_model_name,
+        num_labels=len(label2id),
+    )
+    base_model = AutoModel.from_pretrained(selected_model_name, config=config)
 
     model = BertEmotionRiskModel(
-        selected_model_name,
+        config=config,
+        base_model=base_model,
         num_labels=len(label2id),
         use_risk=args.use_risk_flags,
         dropout_rate=args.dropout_rate
@@ -1158,14 +1267,30 @@ def main():
         plot_confusion_matrix(
             test_metrics["confusion_matrix"],
             label_names=list(id2label.values()),
-            save_to=os.path.join(viz_dir, "confusion_matrix_light.png"),
-            dark_mode=False
+            save_to=os.path.join(viz_dir, "confusion_matrix_light_absolute.png"),
+            dark_mode=False,
+            label_counts="absolute"
         )
         plot_confusion_matrix(
             test_metrics["confusion_matrix"],
             label_names=list(id2label.values()),
-            save_to=os.path.join(viz_dir, "confusion_matrix_dark.png"),
-            dark_mode=True
+            save_to=os.path.join(viz_dir, "confusion_matrix_dark_absolute.png"),
+            dark_mode=True,
+            label_counts="absolute"
+        )
+        plot_confusion_matrix(
+            test_metrics["confusion_matrix"],
+            label_names=list(id2label.values()),
+            save_to=os.path.join(viz_dir, "confusion_matrix_light_relative.png"),
+            dark_mode=False,
+            label_counts="relative"
+        )
+        plot_confusion_matrix(
+            test_metrics["confusion_matrix"],
+            label_names=list(id2label.values()),
+            save_to=os.path.join(viz_dir, "confusion_matrix_dark_relative.png"),
+            dark_mode=True,
+            label_counts="relative"
         )
         # Save classification report to a text file
         save_classification_report(
