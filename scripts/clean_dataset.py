@@ -20,7 +20,7 @@ path_raw_goemotions = REPO_ROOT / "data" / "raw" / "goemotions_processed.csv"
 #path_raw_love_surprise = "data/raw/love_surprise_bonus.csv"
 #path_raw_disgust = "data/raw/disgust_bonus.csv"
 path_raw_6labels = REPO_ROOT / "data" / "raw" / "dataset_6labels_more.csv"
-path_raw_7labels = REPO_ROOT / "data" / "raw" / "dataset_7labels.csv"
+path_raw_7labels = REPO_ROOT / "data" / "raw" / "dataset_7labels_ids.csv"
 
 dir_cleaned = REPO_ROOT / "data" / "processed"
 path_cleaned_6labels = dir_cleaned / "dataset_6labels_clean.csv"
@@ -123,7 +123,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Clean datasets for emotion modeling.")
     parser.add_argument(
         "action",
-        choices=["clean_6emotions", "clean_goemotions", "clean_all"],
+        choices=["clean_6emotions", "clean_7emotions", "clean_450k", "clean_goemotions", "clean_all"],
         help="Choose which cleaning pipeline to run.", 
         default="clean_all"
     )

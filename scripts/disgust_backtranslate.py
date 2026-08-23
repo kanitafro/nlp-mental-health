@@ -5,7 +5,7 @@ NOW WITH PER-LANGUAGE TRACKING
 """
 
 # dependencies:
-# pip install pandas torch transformers tqdm sentencepiece numpy
+# pip install pandas torch transformers tqdm sentencepiece numpy sys argparse
 
 # run this to recreate the back-translated dataset:
 # python disgust_backtranslate.py --model_type m2m100 --languages fr es de
@@ -17,12 +17,19 @@ from tqdm import tqdm
 import argparse
 import numpy as np
 
+# Add project root to path
+import sys
+from pathlib import Path
+sys.path.append('../')
+from scripts.merge_to_6labels_7labels import create_ids
+
+path_paraphrased = "../data/raw/disgust_paraphrased.csv"
 
 # ============================================
 # CONFIGURATION
 # ============================================
 BATCH_SIZE = 128  # L40S can handle this
-INTERMEDIATE_LANGUAGES = ['fr', 'de', 'es']  # Default languages
+INTERMEDIATE_LANGUAGES = ['fr', 'de', 'es', 'it', 'zh']  # Default languages
 NUM_WORKERS = 4
 
 def setup_gpu():
@@ -77,27 +84,32 @@ class FastBackTranslator:
         translations = self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
         return translations
     
-    def backtranslate_with_tracking(self, texts, intermediate_langs=['fr'], src_lang='en'):
+    def backtranslate_with_tracking(self, texts, original_ids, intermediate_langs=['fr'], src_lang='en'):
         """
-        Back-translate with language tracking
-        Returns list of (text, language) tuples
+        Back-translate with language and original ID tracking.
+        Returns list of (text, language, original_id) tuples.
         """
-        all_results = []  # Each element will be (text, lang)
+        all_results = []  # Each element will be (text, lang, original_id)
         
         for lang in intermediate_langs:
             print(f"   → {src_lang} to {lang} to {src_lang}")
             
-            # Forward translation
-            forward = self.translate_batch(texts, src_lang=src_lang, tgt_lang=lang)
-            
-            # Back translation
-            backward = self.translate_batch(forward, src_lang=lang, tgt_lang=src_lang)
-            
-            # Add to results with language tag
-            for text in backward:
-                if text and text.strip():
-                    all_results.append((text, lang))
-        
+            # Process in batches to avoid OOM on large datasets
+            for i in tqdm(range(0, len(texts), BATCH_SIZE), desc=f"Translating to {lang}"):
+                batch_texts = texts[i:i+BATCH_SIZE]
+                batch_ids = original_ids[i:i+BATCH_SIZE]
+
+                # Forward translation
+                forward = self.translate_batch(batch_texts, src_lang=src_lang, tgt_lang=lang)
+                
+                # Back translation
+                backward = self.translate_batch(forward, src_lang=lang, tgt_lang=src_lang)
+                
+                # Add to results with language tag and original ID
+                for j, text in enumerate(backward):
+                    if text and text.strip() and len(text) > 10 and text.lower() != batch_texts[j].lower():
+                        all_results.append((text, lang, batch_ids[j]))
+
         return all_results
 
 class LightweightBackTranslator:
@@ -195,143 +207,121 @@ class LightweightBackTranslator:
             return translations
         except Exception as e:
             print(f"Error translating {lang}: {e}")
-            return texts
-    
-    def backtranslate_with_tracking(self, texts, intermediate_langs=['fr', 'de', 'es']):
+            return [] # Return empty list on error
+
+    def backtranslate_with_tracking(self, texts, original_ids, intermediate_langs=['fr']):
         """
-        Multi-language back-translation with tracking
-        Returns list of (text, language) tuples
+        Back-translate with language and original ID tracking using lightweight models.
+        Returns list of (text, language, original_id) tuples.
         """
-        all_results = []  # Each element will be (text, lang)
+        all_results = []
         
         for lang in intermediate_langs:
-            print(f"   → English → {lang.upper()} → English")
-            
-            # Forward translation
-            forward = self.translate_batch(texts, lang, 'forward')
-            
-            # Back translation
-            backward = self.translate_batch(forward, lang, 'backward')
-            
-            # Add to results with language tag
-            for text in backward:
-                if text and text.strip() and len(text) > 10:
-                    all_results.append((text, lang))
-        
+            if lang not in self.language_pairs:
+                print(f"Warning: Language '{lang}' not supported by lightweight translator. Skipping.")
+                continue
+                
+            print(f"   → EN to {lang} to EN (lightweight)")
+
+            for i in tqdm(range(0, len(texts), BATCH_SIZE), desc=f"Translating to {lang} (light)"):
+                batch_texts = texts[i:i+BATCH_SIZE]
+                batch_ids = original_ids[i:i+BATCH_SIZE]
+
+                # Forward and back translation
+                forward = self.translate_batch(batch_texts, lang, direction='forward')
+                backward = self.translate_batch(forward, lang, direction='backward')
+                
+                for j, text in enumerate(backward):
+                    if text and text.strip() and len(text) > 10 and text.lower() != batch_texts[j].lower():
+                        all_results.append((text, lang, batch_ids[j]))
+
         return all_results
 
-def disgust_backtranslate():
+def main(args):
+    """Main function to run back-translation"""
+    
+    # ============================================
+    # 1. SETUP
+    # ============================================
+    device, num_gpus = setup_gpu()
+    
+    if args.model_type == 'm2m100':
+        translator = FastBackTranslator(device)
+    else:
+        translator = LightweightBackTranslator(device)
+        
+    # ============================================
+    # 2. LOAD DATA
+    # ============================================
+    print(f"\n📂 Loading data from {path_paraphrased}...")
+    df_paraphrased = pd.read_csv(path_paraphrased)
+    
+    # Prepare data for translation (only originals)
+    original_df = df_paraphrased[df_paraphrased['method'] == 'original'].copy()
+    original_texts = original_df['text'].tolist()
+    original_ids = original_df['sample_id'].tolist()
+    
+    print(f"Found {len(original_texts)} original samples to back-translate.")
+    
+    # ============================================
+    # 3. BACK-TRANSLATE
+    # ============================================
+    print(f"\n🔄 Back-translating with languages: {args.languages}")
+    
+    # This now returns (text, lang, original_id)
+    backtranslated_results = translator.backtranslate_with_tracking(
+        original_texts,
+        original_ids,
+        intermediate_langs=args.languages
+    )
+    
+    if not backtranslated_results:
+        print("\nNo valid back-translations were generated. Exiting.")
+        return
+
+    # Create a new DataFrame for the back-translated data
+    backtranslated_df = pd.DataFrame(backtranslated_results, columns=['text', 'lang', 'original_id'])
+    
+    # Create the 'method' column
+    backtranslated_df['method'] = 'backtrans_' + backtranslated_df['lang']
+    backtranslated_df['label'] = 'disgust' # All are disgust
+    
+    print(f"\nGenerated {len(backtranslated_df)} new back-translated samples.")
+    
+    # ============================================
+    # 4. MERGE AND SAVE
+    # ============================================
+    print("\n💾 Merging and saving data...")
+    
+    # Assign new sample_ids starting from the max of the loaded dataframe
+    max_existing_id = df_paraphrased['sample_id'].max()
+    backtranslated_df['sample_id'] = range(max_existing_id + 1, max_existing_id + 1 + len(backtranslated_df))
+    
+    # Combine the original dataframe with the new synthetic one
+    final_df = pd.concat([df_paraphrased, backtranslated_df], ignore_index=True)
+    
+    # Reorder and select final columns
+    final_df = final_df[['sample_id', 'original_id', 'text', 'label', 'method']]
+
+    # Convert original_id to a nullable integer type to handle NaNs
+    final_df['original_id'] = final_df['original_id'].astype(pd.Int64Dtype())
+    
+    # Save to a new back-translated file
+    output_path = "../data/raw/disgust_backtranslated.csv"
+    final_df.to_csv(output_path, index=False)
+    
+    print(f"\n✅ Successfully saved {len(final_df)} total samples to {output_path}")
+    print("\n📊 Final DataFrame sample (showing new back-translated entries):")
+    print(final_df[final_df['method'].str.startswith('backtrans')].tail(10))
+
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Fast Back-Translation for Server')
     parser.add_argument('--input', type=str, default='../data/raw/disgust_original.csv')
     parser.add_argument('--output', type=str, default='../data/raw/disgust_backtranslated.csv')
     parser.add_argument('--model_type', type=str, choices=['m2m100', 'lightweight'], default='lightweight')
-    parser.add_argument('--languages', nargs='+', default=['fr', 'de', 'es'], 
+    parser.add_argument('--languages', nargs='+', default=INTERMEDIATE_LANGUAGES, 
                        help='Intermediate languages (e.g., fr de es ru zh)')
     parser.add_argument('--batch_size', type=int, default=128, help='Batch size')
     args = parser.parse_args()
-    
-    print("="*60)
-    print("🚀 SERVER-OPTIMIZED BACK-TRANSLATION (WITH LANGUAGE TRACKING)")
-    print("="*60)
-    
-    # Setup
-    device, num_gpus = setup_gpu()
-
-    # Load data
-    print(f"\n📂 Loading {args.input}...")
-    df = pd.read_csv(args.input)
-    original_texts = df['text'].tolist()
-    print(f"Loaded {len(original_texts):,} original disgust instances")
-    
-    # Initialize translator
-    if args.model_type == 'm2m100':
-        translator = FastBackTranslator(device)
-        backtranslate_func = translator.backtranslate_with_tracking
-    else:
-        translator = LightweightBackTranslator(device)
-        backtranslate_func = translator.backtranslate_with_tracking
-    
-    # Back-translate
-    print(f"\n🔄 Running back-translation through: {', '.join(args.languages)}")
-    
-    # Process in batches
-    all_results_with_lang = []  # List of (text, language)
-    batch_size = args.batch_size
-    
-    for i in tqdm(range(0, len(original_texts), batch_size), desc="Back-translation"):
-        batch = original_texts[i:i+batch_size]
-        
-        # Translate batch (returns list of (text, lang) tuples)
-        batch_results = backtranslate_func(batch, intermediate_langs=args.languages)
-        all_results_with_lang.extend(batch_results)
-        
-        # Clear cache between batches
-        if i % (batch_size * 5) == 0:
-            torch.cuda.empty_cache()
-    
-    print(f"✅ Back-translation complete: {len(all_results_with_lang):,} examples")
-    
-    # Combine with original
-    print("\n📊 Combining and saving...")
-    augmented_data = []
-    
-    # Add original
-    for text in original_texts:
-        augmented_data.append({
-            'text': text, 
-            'label': 'disgust', 
-            'method': 'original',
-            'language': 'English (original)'
-        })
-    
-    # Add back-translated with per-language tracking
-    for text, lang in all_results_with_lang:
-        if text and text.strip() and len(text) > 10:
-            augmented_data.append({
-                'text': text, 
-                'label': 'disgust', 
-                'method': f'backtrans_{lang}',  # e.g., 'backtrans_fr', 'backtrans_de'
-                'language': lang
-            })
-    
-    df_augmented = pd.DataFrame(augmented_data)
-    df_augmented = df_augmented.drop_duplicates(subset=['text'], keep='first')
-    
-    # Save
-    df_augmented.to_csv(args.output, index=False)
-    
-    # Final summary
-    print("\n" + "="*60)
-    print("✅ BACK-TRANSLATION COMPLETE!")
-    print("="*60)
-    print(f"\n📁 Saved to: {args.output}")
-    print(f"\n📊 Final counts:")
-    print(f"   Original:           {len(original_texts):,}")
-    print(f"   Back-translated:    {len(all_results_with_lang):,}")
-    print(f"   Total unique:       {len(df_augmented):,}")
-    print(f"\n📈 Augmentation factor: {len(df_augmented)/len(original_texts):.2f}x")
-    
-    # Show breakdown by language
-    print(f"\n📊 Breakdown by method:")
-    print(df_augmented['method'].value_counts().to_string())
-    
-    if 'language' in df_augmented.columns:
-        print(f"\n📊 Breakdown by language (back-translated only):")
-        lang_counts = df_augmented[df_augmented['language'].notna()]['language'].value_counts()
-        print(lang_counts.to_string())
-    
-    # Sample
-    print("\n🎯 Sample back-translated examples by language:")
-    print("-"*60)
-    for lang in args.languages:
-        samples = df_augmented[df_augmented['language'] == lang]['text'].head(2)
-        if len(samples) > 0:
-            print(f"\n[{lang.upper()}]:")
-            for sample in samples:
-                print(f"   {sample[:100]}...")
-    
-    torch.cuda.empty_cache()
-    print("\n🧹 GPU cache cleared")
-
-if __name__ == "__main__":
-    disgust_backtranslate()
+    main(args)
