@@ -43,21 +43,19 @@ class EarlyStopping:
         self.patience = patience
         self.min_delta = min_delta
         self.verbose = verbose
-        self.best_loss = None
         self.counter = 0
         self.early_stop = False
+        self.val_loss_min = float('inf')
 
     def step(self, val_loss):
         """
-        Call this after each validation epoch
-        Returns True if training should stop
+        Call this after each validation epoch.
+        Returns True if the model has improved, False otherwise.
         """
-        if self.best_loss is None:
-            self.best_loss = val_loss
-            return False
+        improved = val_loss < self.val_loss_min - self.min_delta
 
-        if val_loss < self.best_loss - self.min_delta:
-            self.best_loss = val_loss
+        if improved:
+            self.val_loss_min = val_loss
             self.counter = 0
         else:
             self.counter += 1
@@ -65,5 +63,9 @@ class EarlyStopping:
                 print(f"EarlyStopping counter: {self.counter} out of {self.patience}")
             if self.counter >= self.patience:
                 self.early_stop = True
+        
+        return improved
 
-        return self.early_stop
+    @property
+    def best_loss(self):
+        return self.val_loss_min

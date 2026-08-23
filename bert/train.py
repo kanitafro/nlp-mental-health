@@ -150,7 +150,7 @@ def train_batch(model, batch, criterion, device, accumulation_steps,
     return total_loss.item()
 
 
-def validate_emotions_only(model, val_loader, device, args):
+def validate_emotions_only(model, val_loader, device, args, criterion=None):
     """
     Validate only the main emotion dataset.
     Returns avg_val_loss and emotion metrics.
@@ -165,11 +165,22 @@ def validate_emotions_only(model, val_loader, device, args):
             outputs = model(
                 input_ids=batch["input_ids"],
                 attention_mask=batch["attention_mask"],
-                labels=batch["emotion_labels"],
+                labels=None,
                 risk_labels=None
             )
 
-            val_loss += outputs.loss.item()
+            if criterion is not None:
+                batch_loss = criterion(
+                    outputs.logits,
+                    batch["emotion_labels"]
+                )
+            else:
+                batch_loss = torch.nn.functional.cross_entropy(
+                    outputs.logits,
+                    batch["emotion_labels"]
+                )
+
+            val_loss += batch_loss.item()
             preds.append(outputs.logits.cpu().numpy())
             trues.append(batch["emotion_labels"].cpu().numpy())
 
@@ -319,6 +330,68 @@ def summarize_metric_dicts(metric_dicts):
 
     return summary
 
+def build_emotion_cv_folds(df, n_splits, random_state=42):
+    """
+    Build group-aware stratified CV folds for emotion training.
+
+    Disgust samples are grouped by original_id so that an original
+    sample and all of its augmented variants remain in the same fold.
+
+    Non-disgust samples are individual groups.
+    """
+    df = df.reset_index(drop=True).copy()
+
+    # Every row needs a group.
+    # For disgust: original_id groups original + augmented variants.
+    # For everything else: each sample is its own group.
+    groups = df["sample_id"].astype(str).copy()
+
+    disgust_mask = df["original_label"] == "disgust"
+
+    groups.loc[disgust_mask] = (
+        "disgust_" +
+        df.loc[disgust_mask, "original_id"].astype(str)
+    )
+
+    # One label per group is required for stratification.
+    group_df = pd.DataFrame({
+        "group": groups,
+        "label": df["label"]
+    })
+
+    group_labels = (
+        group_df
+        .groupby("group")["label"]
+        .first()
+    )
+
+    skf = StratifiedKFold(
+        n_splits=n_splits,
+        shuffle=True,
+        random_state=random_state
+    )
+
+    folds = []
+
+    group_values = group_labels.index.to_numpy()
+    group_y = group_labels.to_numpy()
+
+    for train_group_idx, val_group_idx in skf.split(
+        group_values,
+        group_y
+    ):
+        train_groups = set(group_values[train_group_idx])
+        val_groups = set(group_values[val_group_idx])
+
+        train_mask = groups.isin(train_groups)
+        val_mask = groups.isin(val_groups)
+
+        folds.append({
+            "train_df": df.loc[train_mask].copy(),
+            "val_df": df.loc[val_mask].copy(),
+        })
+
+    return folds
 
 def run_emotion_cross_validation(df, create_dataset_fn, selected_model_name, args, device):
     """
@@ -326,22 +399,65 @@ def run_emotion_cross_validation(df, create_dataset_fn, selected_model_name, arg
     """
     cv_args = argparse.Namespace(**vars(args))
     cv_args.save_checkpoints = False
-    cv_args.early_stopping = False
+    cv_args.early_stopping = args.early_stopping
     cv_args.use_risk = args.use_risk_flags  # Correctly copy the flag
 
     # Create a directory for fold-specific visualization plots
     viz_dir = f"saved_models/trained_model_{cv_args.model_version}/metrics/cv_fold_plots"
     os.makedirs(viz_dir, exist_ok=True)
 
-    skf = StratifiedKFold(n_splits=cv_args.emotion_cv_folds, shuffle=True, random_state=42)
-    
+    folds = build_emotion_cv_folds(
+        df,
+        n_splits=cv_args.emotion_cv_folds,
+        random_state=42
+    )
+
     fold_results = []
 
-    for fold_idx, (train_idx, val_idx) in enumerate(skf.split(df, df["label"])):
-        print(f"\n=== Emotion CV Fold {fold_idx + 1}/{cv_args.emotion_cv_folds} ===")
+    for fold_idx, fold in enumerate(folds):
+        print(
+            f"\n=== Emotion CV Fold "
+            f"{fold_idx + 1}/{cv_args.emotion_cv_folds} ==="
+        )
 
-        train_df = df.iloc[train_idx]
-        val_df = df.iloc[val_idx]
+        train_df = fold["train_df"]
+        val_df = fold["val_df"]
+
+        print(
+            f"CV fold sizes | "
+            f"train={len(train_df)} | "
+            f"val={len(val_df)}"
+        )
+
+        # Verify no disgust original_id appears in both sets.
+        train_disgust_ids = set(
+            train_df.loc[
+                train_df["original_label"] == "disgust",
+                "original_id"
+            ].dropna()
+        )
+
+        val_disgust_ids = set(
+            val_df.loc[
+                val_df["original_label"] == "disgust",
+                "original_id"
+            ].dropna()
+        )
+
+        overlap = train_disgust_ids & val_disgust_ids
+
+        if overlap:
+            raise RuntimeError(
+                f"DISGUST GROUP LEAKAGE in CV fold {fold_idx + 1}: "
+                f"{len(overlap)} original_ids overlap."
+            )
+
+        print(
+            f"Disgust group check: "
+            f"train={len(train_disgust_ids)}, "
+            f"val={len(val_disgust_ids)}, "
+            f"overlap={len(overlap)}"
+        )
 
         train_ds = create_dataset_fn(train_df)
         val_ds = create_dataset_fn(val_df)
@@ -609,6 +725,9 @@ def train_one_fold(model, train_loader, val_loader, optimizer, scheduler,
     checkpoint_dir = args.checkpoint_dir
     os.makedirs(checkpoint_dir, exist_ok=True)
 
+    # Initialize return values before the loop
+    metrics, risk_metrics, risk_outputs = None, {}, {}
+
     for epoch in range(epoch_start, args.epochs):
         model.train()
         optimizer.zero_grad()
@@ -641,7 +760,7 @@ def train_one_fold(model, train_loader, val_loader, optimizer, scheduler,
 
         # ----- Validate emotions only -----
         if args.use_emotions:
-            avg_val_loss, metrics = validate_emotions_only(model, val_loader, device, args)
+            avg_val_loss, metrics = validate_emotions_only(model, val_loader, device, args, criterion=criterion)
         else:
             avg_val_loss, metrics = float("nan"), None
         history["val_loss"].append(avg_val_loss)
@@ -675,11 +794,14 @@ def train_one_fold(model, train_loader, val_loader, optimizer, scheduler,
 
         # --- Checkpointing, Early Stopping, and Learning Rate Scheduling ---
         if use_early_stopping and early_stopper is not None:
-            # The early_stopper.step() method now implicitly handles checking if the score has improved
-            # and returns True if it has.
+            previous_best = early_stopper.best_loss
+
             if early_stopper.step(avg_val_loss):
-                print(f"Validation loss improved from {early_stopper.val_loss_min:.4f} to {avg_val_loss:.4f}. Saving best model...")
-                # Save the best model, naming it based on whether it's part of a CV run
+                print(
+                    f"Validation loss improved from {previous_best:.4f} "
+                    f"to {avg_val_loss:.4f}. Saving best model..."
+                )
+                
                 if fold_num is not None:
                     best_model_save_path = os.path.join(checkpoint_dir, f"best_model_fold_{fold_num}.pt")
                 else:
@@ -687,11 +809,7 @@ def train_one_fold(model, train_loader, val_loader, optimizer, scheduler,
                 
                 torch.save(model.state_dict(), best_model_save_path)
                 print(f"Saved best model to {best_model_save_path}")
-            else:
-                # We use the counter from the early_stopper to show how many epochs have passed without improvement
-                print(f"Validation loss did not improve for {early_stopper.counter} epoch(s).")
 
-            # Check if the early stopping condition is met
             if early_stopper.early_stop:
                 print("Early stopping triggered.")
                 break
@@ -709,36 +827,7 @@ def train_one_fold(model, train_loader, val_loader, optimizer, scheduler,
                 "history": history
             }, ckpt_path)
             print(f"Checkpoint saved: {ckpt_path}")
-        """
-        # --- Checkpointing, Early Stopping, and Learning Rate Scheduling ---
-            
-        # Save checkpoint for every epoch if not doing cross-validation
-        if fold_num is None and args.emotion_cv_folds == 1:
-            epoch_model_save_path = os.path.join(checkpoint_dir, f"model_epoch_{epoch + 1}.pt")
-            torch.save(model.state_dict(), epoch_model_save_path)
-            print(f"Saved checkpoint for epoch {epoch + 1} at {epoch_model_save_path}")
-
-        if avg_val_loss < best_val_loss:
-            print(f"Validation loss improved from {best_val_loss:.4f} to {avg_val_loss:.4f}. Saving best model...")
-            best_val_loss = avg_val_loss
-            epochs_no_improve = 0
-
-            # Save the best model, naming it based on whether it's part of a CV run
-            if fold_num is not None:
-                best_model_save_path = os.path.join(checkpoint_dir, f"best_model_fold_{fold_num}.pt")
-            else:
-                best_model_save_path = os.path.join(checkpoint_dir, "best_model.pt")
-            
-            torch.save(model.state_dict(), best_model_save_path)
-            print(f"Saved best model to {best_model_save_path}")
-            
-        else:
-            epochs_no_improve += 1
-            print(f"Validation loss did not improve for {epochs_no_improve} epoch(s).")"""
-
-        # Learning rate scheduling step
-        if args.use_emotions:
-            scheduler.step(avg_val_loss)
+        
 
     return metrics, history, risk_metrics, risk_outputs
 
@@ -1050,41 +1139,7 @@ def main():
     # ------------------------
     # Risk flag loaders
     # ------------------------
-    """risk_loaders = []
 
-    if args.use_risk_flags:
-        for risk_name, path in risk_data_paths.items():
-            rdf = pd.read_csv(path)
-
-            # Map labels: safe -> 0, risk -> 1
-            rdf["label"] = rdf["label"].map(
-                lambda x: 0 if "safe" in str(x).lower() else 1
-            )
-
-            rds = create_dataset(rdf, use_risk=True, risk_name=risk_name)
-            risk_loaders.append(DataLoader(rds, batch_size=args.batch_size, shuffle=True))
-        print(f"Loaded {len(risk_loaders)} risk datasets")"""
-
-    """risk_loaders = []
-    if args.use_risk_flags:
-        for risk_name, path in risk_data_paths.items():
-            rdf = pd.read_csv(path)
-            rdf["label"] = rdf["label"].map(lambda x: 0 if "safe" in str(x).lower() else 1)
-            #rds = create_dataset(rdf, use_risk=True, risk_name=risk_name)
-            #risk_loaders.append((risk_name, DataLoader(rds, batch_size=args.batch_size//2)))
-
-            # Make risk validation stratified
-            rtrain_df, rval_df = train_test_split(rdf, test_size=0.3, stratify=rdf["label"], random_state=42)
-
-            rtrain_ds = create_dataset(rtrain_df, use_risk=True, risk_name=risk_name)
-            rval_ds   = create_dataset(rval_df,   use_risk=True, risk_name=risk_name)
-
-            risk_loaders.append((risk_name,
-                {
-                    "train": DataLoader(rtrain_ds, batch_size=args.batch_size // 2, shuffle=True),
-                    "val":   DataLoader(rval_ds,   batch_size=args.batch_size // 2, shuffle=False),
-                }
-            ))"""
     risk_loaders = {} 
     if args.use_risk_flags:
         for risk_name, path in risk_data_paths.items():
@@ -1146,7 +1201,10 @@ def main():
     # Emotion-only CV mode
     elif args.use_emotions and not args.use_risk_flags and args.emotion_cv_folds > 1:
         cv_results = run_emotion_cross_validation(
-            df=df,
+            df=pd.concat(
+                [train_df, val_df],
+                ignore_index=True
+            ),
             create_dataset_fn=create_dataset,
             selected_model_name=selected_model_name,
             args=args,
@@ -1197,7 +1255,12 @@ def main():
     history = {}  # empty if starting fresh
 
     if args.resume_checkpoint:  # path to a .pt file
-        checkpoint = torch.load(args.resume_checkpoint, map_location=device)
+        try:
+            # For newer torch versions that default to weights_only=True
+            checkpoint = torch.load(args.resume_checkpoint, map_location=device, weights_only=False)
+        except TypeError:
+            # Fallback for older torch versions
+            checkpoint = torch.load(args.resume_checkpoint, map_location=device)
         model.load_state_dict(checkpoint["model_state_dict"])
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
@@ -1210,14 +1273,51 @@ def main():
     # ------------------------
     val_metrics, history, val_risk_metrics, val_risk_outputs = train_one_fold(
         model, train_loader, val_loader, optimizer, 
-        scheduler, device, args, epoch_start=start_epoch, train_df=train_df, risk_loaders=risk_loaders
+        scheduler, device, args, epoch_start=start_epoch, 
+        train_df=train_df, risk_loaders=risk_loaders
     )
+
+    # ------------------------
+    # Restore best validation model before test evaluation
+    # ------------------------
+    if args.use_emotions and args.early_stopping:
+        best_model_path = os.path.join(
+            args.checkpoint_dir,
+            "best_model.pt"
+        )
+
+        if os.path.exists(best_model_path):
+            print(
+                f"\nRestoring best validation model from: "
+                f"{best_model_path}"
+            )
+
+            best_state_dict = torch.load(
+                best_model_path,
+                map_location=device,
+                weights_only=True
+            )
+
+            model.load_state_dict(best_state_dict)
+
+            print("Best validation model restored.")
+        else:
+            print(
+                "\nWARNING: best_model.pt was not found. "
+                "Testing the final epoch model."
+            )
 
     # ------------------------
     # Final held-out test evaluation
     # ------------------------
     if args.use_emotions:
-        test_loss, test_metrics = validate_emotions_only(model, test_loader, device, args)
+        test_loss, test_metrics = validate_emotions_only(
+            model, 
+            test_loader, 
+            device, 
+            args, 
+            criterion=None
+        )
     else:
         test_loss, test_metrics = float("nan"), None
     test_risk_metrics, test_risk_outputs = validate_risk_datasets(

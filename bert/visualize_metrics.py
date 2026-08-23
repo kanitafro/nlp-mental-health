@@ -193,7 +193,7 @@ def plot_confusion_matrix(cm, label_names, save_to=None, dark_mode=False, label_
     cbar = ax.collections[0].colorbar
     cbar.ax.yaxis.label.set_color(text_color)
     cbar.ax.tick_params(colors=text_color)
-    cbar.set_label(cbar_label, color=bg_color)
+    cbar.set_label(cbar_label, color=text_color)
 
     plt.tight_layout()
 
