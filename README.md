@@ -224,7 +224,7 @@ It is **not** a diagnostic or clinical decision-making tool.
 ![Train History plot](figs/trained_model_v2_7/train_history_dark.png)
 
 
-              precision    recall  f1-score   support
+                precision    recall  f1-score   support
 
        anger      0.9205    0.9187    0.9196      8898
      disgust      0.8869    0.8893    0.8881      3026
