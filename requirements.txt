@@ -25,3 +25,6 @@ sacremoses
 sentencepiece
 scipy
 sympy
+captum
+shap
+tf-keras

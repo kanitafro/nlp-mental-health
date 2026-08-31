@@ -52,8 +52,10 @@ class BertEmotionRiskModel(BertPreTrainedModel):
         self,
         input_ids=None,
         attention_mask=None,
+        token_type_ids=None,
         labels=None,
-        risk_labels=None
+        risk_labels=None,
+        **kwargs
     ):
         # BERT forward
         outputs = self.bert(
