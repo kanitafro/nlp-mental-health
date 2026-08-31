@@ -216,26 +216,42 @@ It is **not** a diagnostic or clinical decision-making tool.
 
 ## RESULTS
 
-### Emotion Classification
-
-<img width="666" height="547" alt="Image" src="https://github.com/user-attachments/assets/9b470821-52ff-4434-9a9a-8c3c94d382a7" /> 
-
-              		  precision    recall     f1-score   support
-
-            anger  	    0.9097      0.9695    0.9387     17794
-             fear	  	0.9615      0.8276    0.8895     14894
-              joy   	0.9633      0.9092    0.9355     42920
-             love    	0.7402      0.8855    0.8063     17207
-          sadness    	0.9754      0.9400    0.9573     36355
-         surprise       0.7556      0.8955    0.8196      6792
-
-         accuracy 	                    	  0.9127    135962
-        macro avg	    0.8843      0.9045    0.8912    135962
-     weighted avg 	    0.9207      0.9127    0.9146    135962
-   
+### **Emotion Classification** – DistilBERT **7‑Emotion** Model
 
 
-### Risk Detection
+- **Hyperparameters**: LR=3e‑5, batch=32, dropout=0.3, warmup=0.1, early stopping (patience=3). Five‑fold cross‑validation showed stable performance (accuracy ~90.8%, macro F1 ~88.8%). 
+
+![Train History plot](bert/saved_models/trained_model_v2_7/metrics/train_history_dark.png)
+
+
+              precision    recall  f1-score   support
+
+       anger      0.9205    0.9187    0.9196      8898
+     disgust      0.8869    0.8893    0.8881      3026
+        fear      0.9002    0.8916    0.8959      7447
+         joy      0.9990    0.8754    0.9332     21460
+        love      0.7075    0.9510    0.8114      8604
+     sadness      0.9962    0.9214    0.9573     18178
+    surprise      0.7059    0.9429    0.8074      3396
+
+    accuracy                          0.9073     71009
+    macro avg     0.8738    0.9129    0.8876     71009
+    weighted avg  0.9240    0.9073    0.9111     71009
+
+
+**Test Accuracy:** 90.73%  
+**Cross‑Validation Accuracy:** ~90.8%
+
+![Confusion Matrix (Dark Relative)](bert/saved_models/trained_model_v2_7/metrics/confusion_matrix_dark_relative.png)
+
+- **Strong overall generalisation** – the test results closely match CV averages (macro F1 88.76 vs 88.8, accuracy 90.73 vs 90.8), confirming stable learning without overfitting.
+- **Joy and sadness** are exceptionally precise (≥99.6%) but more conservative in recall (87.5% and 92.1%), meaning they rarely misclassify other emotions into these classes but occasionally miss borderline cases.
+- **Love and surprise** show the inverse behaviour: very high recall (≥94%) but lower precision (~71%). The recall‑precision gap is about **24 percentage points**.
+- Love and surprise are semantically broad and often co‑occur with other emotions (e.g., love with joy/sadness, surprise with fear/joy). In a **single‑label** setting, the model is forced to pick exactly one emotion, so many apparent false positives are actually plausible alternative interpretations.
+- **Phase 2** will fine‑tune this model on **GoEmotions**, a **multilabel** dataset where multiple emotions can be assigned per text. This will allow the model to output overlapping labels, likely converting many current “false positives” for love and surprise into valid secondary predictions.
+
+
+### Risk Detection **(need to redo)**
 
 <img width="691" height="547" alt="Image" src="https://github.com/user-attachments/assets/8d220bc9-2d3a-42b2-9619-00519391ba60" />
 
@@ -386,5 +402,103 @@ This constraint is **typed and semantic**, not heuristic.
 - Longitudinal analysis across journal histories
 - Personalization via user-calibrated thresholds
 
+# XAI 
+
+## Phase 1: 7-Emotions DistilBERT
+- **Task**: Single‑label multiclass classification of 7 emotions (`anger`, `disgust`, `fear`, `joy`, `love`, `sadness`, `surprise`).
+- **Model**: DistilBERT‑based classifier trained on 459,935 original samples (+ augmented).
+- **Best checkpoint** evaluated on held‑out test set of **71,009 examples**.
+- **Test Accuracy**: **90.73%**.
+
+
+### XAI Methodology
+- **SHAP** (Shapley values) – token‑level contribution estimation.
+- **Integrated Gradients (IG)** – gradient‑based feature attribution.
+- **Analysed categories**:
+  - True Positives (TP)
+  - False Positives (FP)
+  - Top confusion pairs
+- **Total examples processed**: **48**.
+
+
+
+### Test Set Distribution
+
+| Emotion   | Samples |
+|-----------|--------:|
+| Anger     |   8,898 |
+| Disgust   |   3,026 |
+| Fear      |   7,447 |
+| Joy       |  21,460 |
+| Love      |   8,604 |
+| Sadness   |  18,178 |
+| Surprise  |   3,396 |
+| **Total** |**71,009**|
+
+
+### Top Confusion Pairs
+
+| Ground Truth → Prediction | Cases |
+|---------------------------|------:|
+| Joy → Love                | 2,368 |
+| Fear → Surprise           |   624 |
+| Sadness → Love            |   604 |
+| Sadness → Anger           |   416 |
+| Anger → Fear              |   381 |
+| Sadness → Fear            |   315 |
+| Joy → Surprise            |   236 |
+| Love → Surprise           |   222 |
+| Anger → Disgust           |   166 |
+| Disgust → Surprise        |   160 |
+| Disgust → Anger           |   110 |
+
+- **Joy → Love** (largest): many examples describe positive interpersonal experiences (e.g., time with partner) – the model sees valid evidence for *both* emotions.
+- **Sadness → Love**: rejection, loss, or remembering a deceased person – overlapping sadness and attachment.
+- **Fear → Surprise**: unexpected or threatening events (e.g., someone disappearing) – both emotions are semantically plausible.
+- **Anger ↔ Disgust**: strongly negative events (e.g., family conflict, disturbing scenes) – bidirectional confusion due to shared aversive valence.
+
+
+### True Positive (TP) Highlights
+- **Disgust** – very high confidence (**~0.98**) for explicit cues like *“yuk”* and *“revolting”*.
+- **Fear** – good contextual recognition for driving‑test anxiety and a dangerous bus incident (~0.75–0.76).
+- **Surprise** – high confidence (~0.88) for sudden weather changes and uncertain outcomes.
+- **Joy** – lower confidence (~0.50) due to strong overlap with love in interpersonal contexts.
+- **Love** – moderate confidence (~0.70) for affection/attachment expressions.
+- **Sadness** – moderate confidence (~0.54–0.60) for loss/rejection, often context‑driven rather than lexical.
+- **Anger** – **caution needed**: one selected TP was *“when the committee”* (incomplete) – not strong evidence of meaningful recognition.
+
+### False Positives & Semantic Overlap
+- The model frequently predicts a **semantically related** emotion when the ground truth is different.
+- Examples:
+  - Disgust → Anger (disturbing TV scene).
+  - Anger → Disgust (family conflict) with **~0.98** confidence.
+  - Sadness → Disgust (natural calamity) with **~0.98** confidence.
+  - Sadness → Fear (pregnancy concern) with **~0.75** confidence.
+  - “Strong anger” predicted as Joy (low confidence ~0.45) – a notable edge case.
+  - Love → Joy (successful harvest) – positive valence overlap.
+  - Surprise → Love / Disgust → Surprise (e.g., “thanks” / forgotten camera).
+- **Conclusion**: errors are rarely random; they occur along plausible affective boundaries.
+
+
+### Data Quality Considerations
+- Some test examples are **too short, incomplete, or degraded** (e.g., *“once”*, *“thanks”*, *“did very”*, *“when the committee”*).
+- XAI correctly explains *why* the model predicted a class, but **not every ground‑truth label is necessarily correct** for these ambiguous/incomplete texts.
+- Many confusions stem from the **single‑label constraint** – texts that express multiple emotions must be forced into one class.
+- Therefore, a model–label disagreement does **not automatically equate to a model error**; it may reflect annotation ambiguity.
+
+
+### Phase 1 Conclusions
+- **Strong aggregate performance**: 90.73% test accuracy, stable cross‑validation.
+- The model learns **meaningful contextual representations**, especially for distinctive emotions (disgust, fear, surprise).
+- Main errors are concentrated at **semantically overlapping boundaries**:
+  - Joy ↔ Love
+  - Fear ↔ Surprise
+  - Sadness ↔ Love
+  - Anger ↔ Fear/Disgust
+- These overlaps are natural in human emotion expression, making them challenging for single‑label classification.
+- The XAI results serve a **dual purpose**:
+  1. **Explaining model behaviour** – what the model attends to.
+  2. **Diagnosing dataset issues** – incomplete examples and single‑label ambiguity.
+- This analysis provides a solid baseline for **Phase 2 (GoEmotions multilabel fine‑tuning)**, where overlapping emotions can be predicted jointly, likely resolving many of the observed “false positives”.
 
 
