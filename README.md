@@ -221,7 +221,7 @@ It is **not** a diagnostic or clinical decision-making tool.
 
 - **Hyperparameters**: LR=3e‑5, batch=32, dropout=0.3, warmup=0.1, early stopping (patience=3). Five‑fold cross‑validation showed stable performance (accuracy ~90.8%, macro F1 ~88.8%). 
 
-![Train History plot](bert/saved_models/trained_model_v2_7/metrics/train_history_dark.png)
+![Train History plot](figs/trained_model_v2_7/train_history_dark.png)
 
 
               precision    recall  f1-score   support
@@ -242,7 +242,7 @@ It is **not** a diagnostic or clinical decision-making tool.
 **Test Accuracy:** 90.73%  
 **Cross‑Validation Accuracy:** ~90.8%
 
-![Confusion Matrix (Dark Relative)](bert/saved_models/trained_model_v2_7/metrics/confusion_matrix_dark_relative.png)
+![Confusion Matrix (Dark Relative)](figs/trained_model_v2_7/confusion_matrix_dark_relative.png)
 
 - **Strong overall generalisation** – the test results closely match CV averages (macro F1 88.76 vs 88.8, accuracy 90.73 vs 90.8), confirming stable learning without overfitting.
 - **Joy and sadness** are exceptionally precise (≥99.6%) but more conservative in recall (87.5% and 92.1%), meaning they rarely misclassify other emotions into these classes but occasionally miss borderline cases.
