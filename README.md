@@ -467,7 +467,7 @@ This constraint is **typed and semantic**, not heuristic.
 - **Sadness** – moderate confidence (~0.54–0.60) for loss/rejection, often context‑driven rather than lexical.
 - **Anger** – **caution needed**: one selected TP was *“when the committee”* (incomplete) – not strong evidence of meaningful recognition.
 
-### False Positives & Semantic Overlap
+### False Positives (FP) and Semantic Overlap
 - The model frequently predicts a **semantically related** emotion when the ground truth is different.
 - Examples:
   - Disgust → Anger (disturbing TV scene).
