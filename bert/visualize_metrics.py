@@ -326,4 +326,3 @@ def plot_threshold_sweep(metrics_sweep, risk_name, save_to=None):
     plt.close()
     
     return optimal_threshold
-
