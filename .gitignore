@@ -17,12 +17,14 @@ checkpoints_v1_1/
 # Specific files to ignore
 notebooks/disgust_eda.ipynb
 notebooks/merge_disgust.ipynb
+notebooks/goemotions_eda.ipynb
 data/raw/inference_test.txt
 
 # Data uploads
 *.csv
 *.zip
 data/raw/*.csv
+data/raw/goemotions/
 data/processed/*.csv
 data/raw/*.ini
 data/raw/*.json
