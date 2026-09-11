@@ -1,5 +1,6 @@
 # project-root/bert/dataset.py
 import torch
+import pandas as pd
 from torch.utils.data import Dataset
 
 class TextDataset(Dataset):
@@ -92,3 +93,60 @@ class TextDataset(Dataset):
             item["risk_labels"] = self.risk_labels[idx]
 
         return item
+
+# ---------------------------------------------------------------------
+# Multi-label Dataset
+# ---------------------------------------------------------------------
+class MultiLabelGoEmotionsDataset(Dataset):
+    def __init__(
+        self,
+        df,
+        tokenizer,
+        max_length,
+        label_columns,
+        text_column="clean_text_transf",
+        oversample=False,
+    ):
+        self.df = df.reset_index(drop=True)
+        if oversample:
+            # Identify rare labels (pos_weight > 100)
+            pos_counts = df[label_columns].sum(axis=0)
+            neg_counts = len(df) - pos_counts
+            pos_weight = neg_counts / pos_counts
+            rare_labels = [col for col, w in zip(label_columns, pos_weight) if w > 100]
+            # Duplicate rows that have any rare label
+            mask = df[rare_labels].sum(axis=1) > 0
+            extra = df[mask].sample(frac=1, replace=True, random_state=42)  # oversample
+            self.df = pd.concat([self.df, extra], ignore_index=True)
+            print(f"Oversampled: added {len(extra)} rows (total {len(self.df)})")
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+        self.label_columns = label_columns
+        self.text_column = text_column
+
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, idx):
+        row = self.df.iloc[idx]
+        text = row[self.text_column]
+        if not isinstance(text, str):
+            text = ""
+
+        encoding = self.tokenizer(
+            text,
+            truncation=True,
+            padding="max_length",
+            max_length=self.max_length,
+            return_tensors="pt",
+        )
+
+        # Multi-label target: FloatTensor of 0/1
+        labels = row[self.label_columns].values.astype("float32")
+        labels = torch.tensor(labels, dtype=torch.float)
+
+        return {
+            "input_ids": encoding["input_ids"].squeeze(0),
+            "attention_mask": encoding["attention_mask"].squeeze(0),
+            "labels": labels,
+        }
