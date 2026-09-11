@@ -4,45 +4,13 @@
 
 _Faculty of Electrical Engineering, University of Sarajevo_
 
-![Project structure](figs/pinpilinpauxa_structure.png)
 
 <img width="700" height="400" alt="Image" src="https://github.com/user-attachments/assets/2de60f51-dcae-4e77-861e-b5d9f65382a0" />
 
-## Table of Contents
-
-- [Journal-based Emotion Recognition and Risk Detection using BERT](#journal-based-emotion-recognition-and-risk-detection-using-bert)
-  - [Project Description](#project-description)
-  - [Repository Structure](#repository-structure)
-  - [Training and Inference Pipeline](#training-and-inference-pipeline)
-    - [Training Phase](#training-phase)
-    - [Inference Phase](#inference-phase)
-  - [Joint Emotion Recognition and Risk Detection](#joint-emotion-recognition-and-risk-detection)
-    - [Emotion Recognition](#emotion-recognition)
-    - [Risk Detection](#risk-detection)
-  - [Model Architecture](#model-architecture)
-  - [Training Objective](#training-objective)
-  - [Disclaimer](#disclaimer)
-  - [Instructions](#instructions)
-  - [Results](#results)
-    - [Emotion Classification](#emotion-classification)
-    - [Risk Detection](#risk-detection-1)
-  - [Inference](#inference)
-  - [Lenient Emotion Decoding](#lenient-emotion-decoding)
-    - [Strategy](#strategy)
-  - [Uncertainty-Aware Emotion Interpretation](#uncertainty-aware-emotion-interpretation)
-  - [Risk Thresholding: Non-Arbitrary Design](#risk-thresholding-non-arbitrary-design)
-    - [Clinical Framing](#clinical-framing)
-  - [Evidence-Augmented Interpretation Gates](#evidence-augmented-interpretation-gates)
-    - [Depression-Specific Handling](#depression-specific-handling)
-  - [Post-hoc Textual Grounding](#post-hoc-textual-grounding)
-  - [Subtheme Detection and Disclosure Filtering](#subtheme-detection-and-disclosure-filtering)
-    - [Disclosure Threshold](#disclosure-threshold)
-    - [Lexical Gating](#lexical-gating)
-  - [Design Principles](#design-principles)
-  - [Future Work](#future-work)
-
-
 ## Project Description
+
+![Project structure](figs/pinpilinpauxa_structure.png)
+
 Build a three-layer NLP system for journal entries:
 * Layer 1: Emotion recognition → 6/28 emotions (starting with 6)
 * Layer 2: Risk labeling →  recognize if there are any risk flags (suicidal, self-harm, depression, grief)
@@ -63,12 +31,21 @@ Ultimately, the model will:
 
 ```
 ├── bert/
+│   ├── xai/                      # XAI for single-label and multi-label models
+│   │   ├── explain_multilabel.py
+│   │   ├── explain.py
+│   │   ├── run_multilabel.py
+│   │   ├── run_xai.py
+│   │   ├── utils_multilabel.py
+│   │   ├── utils_xai.py
 │   ├── dataset.py                       # dataset class
+│   ├── finetune_28.py           # RUN finetuning
 │   ├── inference.py                     # inference logic functions
 │   ├── lenient_decoding.py         # for love and surprise only
 │   ├── lexicon_utils.py                 # loading and preparing lexicon for inference
 │   ├── metrics.py                         # computing metrics for emotions and risks
 │   ├── model_utils.py                  # model, optimizer, scheduler, early stopping
+│   ├── multilabel_model.py           # defining the multi-label model
 │   ├── multitask_model.py           # defining the multitasking
 │   ├── test_inference.py               # RUN inference
 │   ├── train.py                               # RUN training
@@ -111,13 +88,20 @@ Ultimately, the model will:
 ├── scripts/    	  # will be run separately before running main.py
 │   ├── clean_dataset.py                         # from loading to cleaning dataset
 │   ├── clean_risklabels.py	                   # cleans risk datasets (for transformer only)
+│   ├── disgust_backtranslate.py	                   # backtranslation augmentation method
+│   ├── disgust_paraphrase.py	                   # backtranslation augmentation method
+│   ├── handle_goemotions.py	                   # downloads GoEmotions and saves raw
 │   ├── map_emotion_to_lexicon.py        # runs everything related to lexicon
+│   ├── merge_to_6labels_7labels.py	                   # merge full raw dataset for 6/7 emotions
 │   ├── risk_ngrams.py 	                   # extracts n-grams from risk datasets (n=1,...,6)
+│   ├── split_7labels.dataset.py	                   # exact (default) split used in train.py, saves separately
 │   
 ├── utils/
 │   ├── __init__.py        
 │   ├── file_io.py                           # load/save helpers
-│   ├── smote_oversampling        # for ML models
+│   ├── smote_oversampling.py        # for ML models
+│   ├── json_utils.py    
+│   ├── merge_disgust.py        # for merging disgust samples
 │
 ├── requirements.txt
 ├── .gitignore
