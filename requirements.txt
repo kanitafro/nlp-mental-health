@@ -28,3 +28,4 @@ sympy
 captum
 shap
 tf-keras
+streamlit
